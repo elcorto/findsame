@@ -16,6 +16,10 @@ def sort_hash_lst(str_lst):
     return np.sort(str_lst).tolist()
 
 
+def split_path(path):
+    return [x for x in path.split('/') if x != '']
+
+
 def get_file_hashes(dr):
     """Hash each file in directory `dr` recursively.
     
@@ -54,8 +58,8 @@ def is_subpath(sub, top):
     >>> is_subpath('a', 'a')
     False
     """
-    ts = [x for x in top.split('/') if x != '']
-    ss = [x for x in sub.split('/') if x != '']
+    ts = split_path(top)
+    ss = split_path(sub)
     lts = len(ts)
     lss = len(ss)
     if lts < lss:
@@ -117,10 +121,21 @@ if __name__ == '__main__':
     for typ, dct in [('dir', dir_store), ('file', file_store)]:
         for hsh,names in dct.iteritems():
             if len(names) > 1:
-                if hsh == empty:
-                    prfx = '{}:empty: '.format(typ)
-                else:     
-                    prfx = '{}: '.format(typ)
-                for name in names:
-                    print("{prfx}{name}".format(prfx=prfx, name=name))
-                print("")
+                # exclude trivial case: dir contains only one subdir, no extra
+                # files:
+                #   foo/
+                #   foo/bar/
+                #   foo/bar/file
+                # then the hash of foo/ and foo/bar/ are the same, don't need
+                # to show that  
+                if typ == 'dir' and len(names) == 2 and \
+                   abs(len(split_path(names[0])) - len(split_path(names[1]))) == 1:
+                    continue
+                else:    
+                    if hsh == empty:
+                        prfx = '{}:empty: '.format(typ)
+                    else:     
+                        prfx = '{}: '.format(typ)
+                    for name in names:
+                        print("{prfx}{name}".format(prfx=prfx, name=name))
+                    print("")
