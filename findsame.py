@@ -12,6 +12,10 @@ def hash_file(fn):
         return hashsum(fd.read())
 
 
+def sort_hash_lst(str_lst):
+    return np.sort(str_lst).tolist()
+
+
 def get_file_hashes(dr):
     """Hash each file in directory `dr` recursively.
     
@@ -75,7 +79,7 @@ def get_dir_hashes(file_hashes, dir_lst=None):
     for dr,lst in dir_hashes.iteritems():
         # sort to make sure the hash is invariant w.r.t. the order of file
         # names
-        dir_hashes[dr] = hashsum(''.join(np.sort(lst)))
+        dir_hashes[dr] = hashsum(''.join(sort_hash_lst(lst)))
     return dir_hashes
 
 
@@ -86,7 +90,8 @@ def find_same(hashes):
             store[hsh].append(name)
         else:     
             store[hsh] = [name]
-    return store
+    # sort to force reproducible results        
+    return dict((k,sort_hash_lst(v)) for k,v in store.iteritems())
 
 
 if __name__ == '__main__':
