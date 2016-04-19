@@ -17,20 +17,20 @@ def get_file_hashes(dr):
     
     Returns
     -------
-    hashes : dict
+    file_hashes : dict
         keys = file names (full path starting with `dr`)
         vals = hash string
     """
-    hashes = {}
+    file_hashes = {}
     for root, dirs, files in os.walk(dr):
         for base in files:
             fn = os.path.join(root, base)
             # sanity check, i.e. strange dangling symlinks
             if os.path.exists(fn) and os.path.isfile(fn):
-                hashes[fn] = hash_file(fn)
+                file_hashes[fn] = hash_file(fn)
             else:    
                 print("ERR {}".format(fn))
-    return hashes
+    return file_hashes
 
 
 def get_dir_lst(dr):
@@ -66,17 +66,17 @@ def get_dir_hashes(file_hashes, dir_lst=None):
     """
     if dir_lst is None:
         dir_lst = set(os.path.dirname(x) for x in file_hashes.keys())
-    store = {}
+    dir_hashes = {}
     for dr in dir_lst:
-        store[dr] = []
+        dir_hashes[dr] = []
         for name,hsh in file_hashes.iteritems():
             if is_subpath(name, dr):
-                store[dr] += [hsh]
-    for dr,lst in store.iteritems():
+                dir_hashes[dr] += [hsh]
+    for dr,lst in dir_hashes.iteritems():
         # sort to make sure the hash is invariant w.r.t. the order of file
         # names
-        store[dr] = hashsum(''.join(np.sort(lst)))
-    return store
+        dir_hashes[dr] = hashsum(''.join(np.sort(lst)))
+    return dir_hashes
 
 
 def find_same(hashes):
