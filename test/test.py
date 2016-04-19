@@ -1,4 +1,4 @@
-import findsame as fs
+from findsame import findsame as fs
 
 def test_subpath():
     assert fs.is_subpath('a/b', 'a')
