@@ -1,7 +1,7 @@
 import subprocess
 import os
 from findsame import findsame as fs
-
+from numpy import sort
 
 def test_subpath():
     assert fs.is_subpath('a/b', 'a')
@@ -22,5 +22,6 @@ def test_exe_stdout():
     exe = '{}/../findsame.py'.format(here)
     out = subprocess.check_output('{} test/data'.format(exe), shell=True)
     with open('{}/ref_output'.format(here)) as fd:
-        ref = fd.read()
-    assert out.strip() == ref.strip()
+        ref = sort(fd.read().splitlines()).tolist()
+    val = sort(out.decode().splitlines()).tolist()
+    assert val == ref, "val:\n{}\nref:\n{}".format(val, ref)

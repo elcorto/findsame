@@ -1,10 +1,31 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
+
+"""
+python3
+-------
+
+* Traversing dict.items() is truly random. We use dicts a lot and the code's
+  output order is unpredictable. With python2, it was the same across repeated
+  runs -- by accident (?) since dicts were always advertised as being
+  random-order access structures.
+
+  We get same-order output in different runs if we replace each {}/dict() with
+  an OrderedDict(). Still, the output order is different from the
+  python2-generated ref_output in test/.
+
+* The code is slower. No bench yet, but it seems to be startup time, maybe
+  imports?
+
+* To make tests pass, we need to sort the output, as well as the ref_output
+  generated with python2.
+"""
 
 import os, hashlib
 import numpy as np
 
+
 def hashsum(x):
-    return hashlib.sha1(x).hexdigest()
+    return hashlib.sha1(x.encode()).hexdigest()
 
 
 def hash_file(fn):
@@ -20,16 +41,24 @@ def split_path(path):
     return [x for x in path.split('/') if x != '']
 
 
+def _dict(*args, **kwds):
+    return dict(*args, **kwds)
+
+
 def get_file_hashes(dr):
     """Hash each file in directory `dr` recursively.
     
+    Parameters
+    ----------
+    dr : str
+
     Returns
     -------
     file_hashes : dict
         keys = file names (full path starting with `dr`)
         vals = hash string
     """
-    file_hashes = {}
+    file_hashes = _dict()
     for root, dirs, files in os.walk(dr):
         for base in files:
             fn = os.path.join(root, base)
@@ -74,13 +103,13 @@ def get_dir_hashes(file_hashes, dir_lst=None):
     """
     if dir_lst is None:
         dir_lst = set(os.path.dirname(x) for x in file_hashes.keys())
-    dir_hashes = {}
+    dir_hashes = _dict()
     for dr in dir_lst:
         dir_hashes[dr] = []
-        for name,hsh in file_hashes.iteritems():
+        for name,hsh in file_hashes.items():
             if is_subpath(name, dr):
                 dir_hashes[dr] += [hsh]
-    for dr,lst in dir_hashes.iteritems():
+    for dr,lst in dir_hashes.items():
         # sort to make sure the hash is invariant w.r.t. the order of file
         # names
         dir_hashes[dr] = hashsum(''.join(sort_hash_lst(lst)))
@@ -88,22 +117,22 @@ def get_dir_hashes(file_hashes, dir_lst=None):
 
 
 def find_same(hashes):
-    store = {}
-    for name,hsh in hashes.iteritems():
-        if store.has_key(hsh):
+    store = _dict()
+    for name,hsh in hashes.items():
+        if hsh in store.keys():
             store[hsh].append(name)
         else:     
             store[hsh] = [name]
     # sort to force reproducible results        
-    return dict((k,sort_hash_lst(v)) for k,v in store.iteritems())
+    return _dict((k,sort_hash_lst(v)) for k,v in store.items())
 
 
 if __name__ == '__main__':
 
     import sys
     
-    file_hashes = {}
-    dir_hashes = {}
+    file_hashes = _dict()
+    dir_hashes = _dict()
     for dr in sys.argv[1:]:
         this_file_hashes = get_file_hashes(dr)
         # pass dir_lst to catch also empty dirs w/o any files in it; the
@@ -119,7 +148,7 @@ if __name__ == '__main__':
     
     empty = hashsum('')
     for typ, dct in [('dir', dir_store), ('file', file_store)]:
-        for hsh,names in dct.iteritems():
+        for hsh,names in dct.items():
             if len(names) > 1:
                 # exclude trivial case: dir contains only one subdir, no extra
                 # files:

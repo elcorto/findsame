@@ -35,4 +35,4 @@ example
 
 tests
 -----
-Run ``nosetests`` (maybe ``apt-get install python-nose`` before (Debian)).
+Run ``nosetests3`` (maybe ``apt-get install python3-nose`` before (Debian)).
