@@ -129,8 +129,13 @@ def find_same(hashes):
 
 if __name__ == '__main__':
 
-    import sys
-    
+    import sys, argparse
+    desc = "Find same files and dirs based on file hashes."
+    parser = argparse.ArgumentParser(description=desc) 
+    parser.add_argument('file/dir', nargs='+',
+                        help='files and/or dirs to compare')
+    args = parser.parse_args()
+ 
     file_hashes = _dict()
     dir_hashes = _dict()
     for dr in sys.argv[1:]:
