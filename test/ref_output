@@ -15,6 +15,9 @@ file: test/data/file2
 file: test/data/file1
 file: test/data/file1_copy
 
+file: test/data/lena.png
+file: test/data/lena_copy.png
+
 file:empty: test/data/empty_file
 file:empty: test/data/empty_file_copy
 

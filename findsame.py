@@ -20,7 +20,7 @@ python3
   generated with python2.
 """
 
-import os, hashlib
+import os, hashlib, sys, argparse, subprocess
 import numpy as np
 
 
@@ -28,9 +28,30 @@ def hashsum(x):
     return hashlib.sha1(x.encode()).hexdigest()
 
 
-def hash_file(fn):
-    with open(fn) as fd:
-        return hashsum(fd.read())
+def hash_file(fn, blocksize=1024**2):
+    """
+    Parameters
+    ----------
+    fn : str
+        filename
+    blocksize : int
+        size of block (bytes) to read at once 
+    
+    Notes
+    -----
+    idea stolen from: http://pythoncentral.io/hashing-files-with-python/
+
+    blocksize : avoid reading a big file completely into memory, blocksize=1
+        MiB is fastest, tested on Core i3, hash 500 MiB file, ~ 1s, sha1sum ~
+        1.5s
+    """
+    hasher = hashlib.sha1()
+    with open(fn, 'rb') as fd:
+        buf = fd.read(blocksize)
+        while buf:
+            hasher.update(buf)
+            buf = fd.read(blocksize)
+    return hasher.hexdigest()
 
 
 def sort_hash_lst(str_lst):
@@ -129,16 +150,15 @@ def find_same(hashes):
 
 if __name__ == '__main__':
 
-    import sys, argparse
     desc = "Find same files and dirs based on file hashes."
     parser = argparse.ArgumentParser(description=desc) 
-    parser.add_argument('file/dir', nargs='+',
-                        help='files and/or dirs to compare')
+    parser.add_argument('dir', nargs='+',
+                        help='dirs to compare')
     args = parser.parse_args()
  
     file_hashes = _dict()
-    dir_hashes = _dict()
-    for dr in sys.argv[1:]:
+    dir_hashes = _dict()  
+    for dr in vars(args)['dir']:
         this_file_hashes = get_file_hashes(dr)
         # pass dir_lst to catch also empty dirs w/o any files in it; the
         # dir_lst generated from file_hashes inside get_dir_hashes() contains

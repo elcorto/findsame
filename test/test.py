@@ -2,6 +2,17 @@ import subprocess
 import os
 from findsame import findsame as fs
 from numpy import sort
+pj = os.path.join
+
+
+def hash_file_subprocess(fn):
+    return subprocess.getoutput(r"sha1sum {} | cut -d ' ' -f1".format(fn))
+
+
+def test_hash():
+    fn = pj(os.path.dirname(__file__), 'data/lena.png')
+    assert fs.hash_file(fn) == hash_file_subprocess(fn)
+
 
 def test_subpath():
     assert fs.is_subpath('a/b', 'a')
