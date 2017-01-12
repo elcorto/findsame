@@ -152,21 +152,26 @@ if __name__ == '__main__':
 
     desc = "Find same files and dirs based on file hashes."
     parser = argparse.ArgumentParser(description=desc) 
-    parser.add_argument('dir', nargs='+',
-                        help='dirs to compare')
+    parser.add_argument('file/dir', nargs='+',
+                        help='files and/or dirs to compare')
     args = parser.parse_args()
  
     file_hashes = _dict()
     dir_hashes = _dict()  
-    for dr in vars(args)['dir']:
-        this_file_hashes = get_file_hashes(dr)
-        # pass dir_lst to catch also empty dirs w/o any files in it; the
-        # dir_lst generated from file_hashes inside get_dir_hashes() contains
-        # only dirs with files
-        this_dir_hashes = get_dir_hashes(this_file_hashes,
-                                         dir_lst=get_dir_lst(dr))
-        file_hashes.update(this_file_hashes)
-        dir_hashes.update(this_dir_hashes)
+    for name in vars(args)['file/dir']:
+        if os.path.isfile(name):
+            file_hashes[name] = hash_file(name)
+        elif os.path.isdir(name):
+            this_file_hashes = get_file_hashes(name)
+            # pass dir_lst to catch also empty dirs w/o any files in it; the
+            # dir_lst generated from file_hashes inside get_dir_hashes() contains
+            # only dirs with files
+            this_dir_hashes = get_dir_hashes(this_file_hashes,
+                                             dir_lst=get_dir_lst(name))
+            file_hashes.update(this_file_hashes)
+            dir_hashes.update(this_dir_hashes)
+        else:
+            print("SKIP: {}".format(name))
     
     file_store = find_same(file_hashes)
     dir_store = find_same(dir_hashes)
