@@ -65,8 +65,31 @@ def split_path(path):
 def _dict(*args, **kwds):
     return dict(*args, **kwds)
 
-
-def get_file_hashes(dr):
+# In [38]: !tree test
+# test
+# └── a
+#     ├── b
+#     │   ├── c
+#     │   │   └── file1
+#     │   ├── file4
+#     │   └── file5
+#     ├── d
+#     │   └── e
+#     │       └── file2
+#     └── file3
+# 
+# 5 directories, 5 files
+# 
+# In [39]: [(r,d,f) for r,d,f in os.walk('test/')]
+# Out[39]: 
+# [('test/', ['a'], []),
+#  ('test/a', ['b', 'd'], ['file3']),
+#  ('test/a/b', ['c'], ['file5', 'file4']),
+#  ('test/a/b/c', [], ['file1']),
+#  ('test/a/d', ['e'], []),
+#  ('test/a/d/e', [], ['file2'])]
+# 
+def get_hashes(dr):
     """Hash each file in directory `dr` recursively.
     
     Parameters
@@ -80,61 +103,29 @@ def get_file_hashes(dr):
         vals = hash string
     """
     file_hashes = _dict()
+    dir_hashes = _dict()
     for root, dirs, files in os.walk(dr):
+        dir_hashes[root] = []
         for base in files:
             fn = os.path.join(root, base)
             # sanity check, i.e. strange dangling symlinks
             if os.path.exists(fn) and os.path.isfile(fn):
-                file_hashes[fn] = hash_file(fn)
+                hsh = hash_file(fn)
+                file_hashes[fn] = hsh
+                for dr in dir_hashes.keys():
+                    if is_subpath(fn, dr):
+                        dir_hashes[dr].append(hsh)
             else:    
                 print("ERR: {}".format(fn))
-    return file_hashes
-
-
-def get_dir_lst(dr):
-    return [root for root, dirs, files in os.walk(dr)]
-
-
-def is_subpath(sub, top):
-    """Whether `sub` is a subdir of dirname `top` (in case `sub` is a dir) or
-    if the file pointed to by `sub` is below `top` (arbitrary levels deep). 
-    
-    Examples
-    --------
-    >>> is_subpath('a/b', 'a')
-    True
-    >>> is_subpath('a', 'a/b')
-    False
-    >>> is_subpath('a', 'a')
-    False
-    """
-    ts = split_path(top)
-    ss = split_path(sub)
-    lts = len(ts)
-    lss = len(ss)
-    if lts < lss:
-        return ts == ss[:lts]
-    else:
-        return False
-
-
-def get_dir_hashes(file_hashes, dir_lst=None):
-    """Hash of dirs derived from file names in `file_hashes` or dirs in
-    `dir_lst`. Dir hash is built from the hashes of all files it containes
-    """
-    if dir_lst is None:
-        dir_lst = set(os.path.dirname(x) for x in file_hashes.keys())
-    dir_hashes = _dict()
-    for dr in dir_lst:
-        dir_hashes[dr] = []
-        for name,hsh in file_hashes.items():
-            if is_subpath(name, dr):
-                dir_hashes[dr].append(hsh)
     for dr,lst in dir_hashes.items():
         # sort to make sure the hash is invariant w.r.t. the order of file
         # names
         dir_hashes[dr] = hashsum(''.join(sort_hash_lst(lst)))
-    return dir_hashes
+    return file_hashes, dir_hashes
+
+
+def is_subpath(sub, top):
+    return len(sub) > len(top) and sub.startswith(top)
 
 
 def find_same(hashes):
@@ -162,12 +153,7 @@ if __name__ == '__main__':
         if os.path.isfile(name):
             file_hashes[name] = hash_file(name)
         elif os.path.isdir(name):
-            this_file_hashes = get_file_hashes(name)
-            # pass dir_lst to catch also empty dirs w/o any files in it; the
-            # dir_lst generated from file_hashes inside get_dir_hashes() contains
-            # only dirs with files
-            this_dir_hashes = get_dir_hashes(this_file_hashes,
-                                             dir_lst=get_dir_lst(name))
+            this_file_hashes, this_dir_hashes = get_hashes(name)
             file_hashes.update(this_file_hashes)
             dir_hashes.update(this_dir_hashes)
         else:
