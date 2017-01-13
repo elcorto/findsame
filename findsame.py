@@ -54,8 +54,8 @@ def hash_file(fn, blocksize=1024**2):
     return hasher.hexdigest()
 
 
-def sort_hash_lst(str_lst):
-    return np.sort(str_lst).tolist()
+def sort_hash_lst(seq):
+    return np.sort(list(seq)).tolist()
 
 
 def split_path(path):
@@ -87,7 +87,7 @@ def get_file_hashes(dr):
             if os.path.exists(fn) and os.path.isfile(fn):
                 file_hashes[fn] = hash_file(fn)
             else:    
-                print("ERR {}".format(fn))
+                print("ERR: {}".format(fn))
     return file_hashes
 
 
@@ -129,7 +129,7 @@ def get_dir_hashes(file_hashes, dir_lst=None):
         dir_hashes[dr] = []
         for name,hsh in file_hashes.items():
             if is_subpath(name, dr):
-                dir_hashes[dr] += [hsh]
+                dir_hashes[dr].append(hsh)
     for dr,lst in dir_hashes.items():
         # sort to make sure the hash is invariant w.r.t. the order of file
         # names
@@ -155,7 +155,7 @@ if __name__ == '__main__':
     parser.add_argument('file/dir', nargs='+',
                         help='files and/or dirs to compare')
     args = parser.parse_args()
- 
+    
     file_hashes = _dict()
     dir_hashes = _dict()  
     for name in vars(args)['file/dir']:
@@ -171,7 +171,7 @@ if __name__ == '__main__':
             file_hashes.update(this_file_hashes)
             dir_hashes.update(this_dir_hashes)
         else:
-            print("SKIP: {}".format(name))
+            print("SKIP: {}".format(name)) 
     
     file_store = find_same(file_hashes)
     dir_store = find_same(dir_hashes)
@@ -180,21 +180,24 @@ if __name__ == '__main__':
     for typ, dct in [('dir', dir_store), ('file', file_store)]:
         for hsh,names in dct.items():
             if len(names) > 1:
-                # exclude trivial case: dir contains only one subdir, no extra
-                # files:
+                # exclude single deep files, where each upper dir has the same
+                # hash as the deep file
                 #   foo/
                 #   foo/bar/
-                #   foo/bar/file
-                # then the hash of foo/ and foo/bar/ are the same, don't need
-                # to show that  
-                if typ == 'dir' and len(names) == 2 and \
-                   abs(len(split_path(names[0])) - len(split_path(names[1]))) == 1:
-                    continue
-                else:    
-                    if hsh == empty:
-                        prfx = '{}:empty: '.format(typ)
-                    else:     
-                        prfx = '{}: '.format(typ)
-                    for name in names:
-                        print("{prfx}{name}".format(prfx=prfx, name=name))
-                    print("")
+                #   foo/bar/baz
+                #   foo/bar/baz/file
+                # In that case, names = ['foo', 'foo/bar', 'foo/bar/baz'] for
+                # typ=='dir'.
+                if typ == 'dir':
+                    tmp = np.array([len(split_path(x)) for x in names],
+                                   dtype=int)
+                    if (np.diff(tmp) == np.ones((len(tmp)-1,),
+                                                dtype=int)).all():
+                        continue
+                if hsh == empty:
+                    prfx = '{}:empty: '.format(typ)
+                else:     
+                    prfx = '{}: '.format(typ)
+                for name in names:
+                    print("{prfx}{name}".format(prfx=prfx, name=name))
+                print("")
