@@ -14,20 +14,6 @@ def test_hash():
     assert fs.hash_file(fn) == hash_file_subprocess(fn)
 
 
-def test_subpath():
-    assert fs.is_subpath('a/b', 'a')
-    assert fs.is_subpath('a/b/', 'a')
-    assert fs.is_subpath('a/b', 'a/')
-    assert fs.is_subpath('a/b/', 'a/')
-    assert fs.is_subpath('/a/b', '/a/')
-    assert fs.is_subpath('/a/b/', '/a/')
-    
-    assert not fs.is_subpath('a', 'a')
-    assert not fs.is_subpath('/a', '/a')
-    assert not fs.is_subpath('a/', 'a/')
-    assert not fs.is_subpath('/a/', '/a/')
-
-
 def test_exe_stdout():
     here = os.path.dirname(__file__)
     exe = '{}/../findsame.py'.format(here)

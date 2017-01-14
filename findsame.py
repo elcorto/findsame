@@ -23,6 +23,17 @@ python3
 import os, hashlib, sys, argparse, subprocess
 import numpy as np
 
+def merge_hash(hash_lst):
+    nn = len(hash_lst)
+    if nn > 1:
+        return hashsum(''.join(sort_hash_lst(hash_lst)))
+    elif nn == 1:
+        return hash_lst[0]
+    # XXX no childs, this happen if we really have a node (=dir) w/o childs -->
+    # OK, OR of we have only links in the dir --> NOT OK, currently we treat
+    # that dir as empty
+    else:
+        return hashsum('')
 
 def hashsum(x):
     return hashlib.sha1(x.encode()).hexdigest()
@@ -65,18 +76,21 @@ def split_path(path):
 def _dict(*args, **kwds):
     return dict(*args, **kwds)
 
+
+# Merkle tree
+#
 # In [38]: !tree test
-# test
-# └── a
-#     ├── b
-#     │   ├── c
-#     │   │   └── file1
-#     │   ├── file4
-#     │   └── file5
-#     ├── d
-#     │   └── e
-#     │       └── file2
-#     └── file3
+# test                      # top node
+# └── a                     # node
+#     ├── b                 # node
+#     │   ├── c             # node
+#     │   │   └── file1     # leaf
+#     │   ├── file4         # leaf
+#     │   └── file5         # leaf
+#     ├── d                 # node
+#     │   └── e             # node
+#     │       └── file2     # leaf
+#     └── file3             # leaf
 # 
 # 5 directories, 5 files
 # 
@@ -88,44 +102,85 @@ def _dict(*args, **kwds):
 #  ('test/a/b/c', [], ['file1']),
 #  ('test/a/d', ['e'], []),
 #  ('test/a/d/e', [], ['file2'])]
-# 
-def get_hashes(dr):
-    """Hash each file in directory `dr` recursively.
-    
-    Parameters
-    ----------
-    dr : str
 
-    Returns
-    -------
-    file_hashes : dict
-        keys = file names (full path starting with `dr`)
-        vals = hash string
-    """
-    file_hashes = _dict()
-    dir_hashes = _dict()
+class Element(object):
+    def __init__(self, name='noname'):
+        self.hash = None
+        self.name = name
+
+    def __repr__(self):
+        return "{}:{}".format(self.kind, self.name)
+
+    def get_hash(self):
+        if VERBOSE:
+            print("get_hash: {}".format(self.name))
+        self.hash = self._get_hash()
+        return self.hash
+    
+    def _get_hash(self):
+        raise NotImplementedError
+
+
+class Node(Element):
+    kind = 'node'
+    def __init__(self, *args, childs=None, **kwds):
+        super(Node, self).__init__(*args, **kwds)
+        self.childs = childs
+    
+    def add_child(self, child):
+        self.childs.append(child)
+
+    def _get_hash(self):
+        return merge_hash([c.get_hash() for c in self.childs])
+    
+
+class Leaf(Element):
+    kind = 'leaf'
+    def __init__(self, *args, fn=None, **kwds):
+        super(Leaf, self).__init__(*args, **kwds)
+        self.fn = fn
+    
+    def _get_hash(self):
+        return hash_file(self.fn)
+
+
+def hash_tree(dr):
+    assert os.path.exists(dr)
+    nodes = {}
+    leafs = {}
+    top = None
     for root, dirs, files in os.walk(dr):
-        dir_hashes[root] = []
+        # make sure os.path.dirname() returns the parent dir
+        if root.endswith('/'):
+            root = root[:-1]
+        node = Node(name=root, childs=[])
         for base in files:
             fn = os.path.join(root, base)
-            # sanity check, i.e. strange dangling symlinks
+            if VERBOSE:
+                print(fn)
+            # XXX skipping links
             if os.path.exists(fn) and os.path.isfile(fn):
-                hsh = hash_file(fn)
-                file_hashes[fn] = hsh
-                for dr in dir_hashes.keys():
-                    if is_subpath(fn, dr):
-                        dir_hashes[dr].append(hsh)
+                leaf = Leaf(name=fn, fn=fn)
+                node.add_child(leaf)
+                leafs[fn] = leaf
             else:    
-                print("ERR: {}".format(fn))
-    for dr,lst in dir_hashes.items():
-        # sort to make sure the hash is invariant w.r.t. the order of file
-        # names
-        dir_hashes[dr] = hashsum(''.join(sort_hash_lst(lst)))
+                print("SKIP: {}".format(fn))
+        nodes[root] = node
+        parent_root = os.path.dirname(root)
+        if parent_root in nodes.keys():
+            nodes[parent_root].add_child(node)
+        if top is None:
+            top = node
+    return top, nodes, leafs
+
+
+def get_hashes(top, nodes, leafs):
+    # start recursive hash calculation in all childs, sets node.hash /
+    # leaf.hash
+    top.get_hash()
+    dir_hashes = dict((k,v.hash) for k,v in nodes.items())
+    file_hashes = dict((k,v.hash) for k,v in leafs.items())
     return file_hashes, dir_hashes
-
-
-def is_subpath(sub, top):
-    return len(sub) > len(top) and sub.startswith(top)
 
 
 def find_same(hashes):
@@ -145,15 +200,22 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=desc) 
     parser.add_argument('file/dir', nargs='+',
                         help='files and/or dirs to compare')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        default=False,
+                        help='verbose')
     args = parser.parse_args()
     
+    VERBOSE = args.verbose
+        
     file_hashes = _dict()
     dir_hashes = _dict()  
     for name in vars(args)['file/dir']:
+        # XXX skipping links
         if os.path.isfile(name):
             file_hashes[name] = hash_file(name)
         elif os.path.isdir(name):
-            this_file_hashes, this_dir_hashes = get_hashes(name)
+            tree = hash_tree(name) 
+            this_file_hashes, this_dir_hashes = get_hashes(*tree)
             file_hashes.update(this_file_hashes)
             dir_hashes.update(this_dir_hashes)
         else:
