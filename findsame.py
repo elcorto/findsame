@@ -20,8 +20,9 @@ python3
   generated with python2.
 """
 
-import os, hashlib, sys, argparse, subprocess
+import os, hashlib, argparse
 import numpy as np
+
 
 def merge_hash(hash_lst):
     nn = len(hash_lst)
@@ -34,6 +35,7 @@ def merge_hash(hash_lst):
     # that dir as empty
     else:
         return hashsum('')
+
 
 def hashsum(x):
     return hashlib.sha1(x.encode()).hexdigest()
@@ -79,6 +81,9 @@ def _dict(*args, **kwds):
 
 # Merkle tree
 #
+# node = dir
+# leaf = file
+#
 # In [38]: !tree test
 # test                      # top node
 # └── a                     # node
@@ -107,6 +112,7 @@ class Element(object):
     def __init__(self, name='noname'):
         self.hash = None
         self.name = name
+        self.kind = None
 
     def __repr__(self):
         return "{}:{}".format(self.kind, self.name)
@@ -122,10 +128,10 @@ class Element(object):
 
 
 class Node(Element):
-    kind = 'node'
     def __init__(self, *args, childs=None, **kwds):
         super(Node, self).__init__(*args, **kwds)
         self.childs = childs
+        self.kind = 'node'
     
     def add_child(self, child):
         self.childs.append(child)
@@ -135,17 +141,17 @@ class Node(Element):
     
 
 class Leaf(Element):
-    kind = 'leaf'
     def __init__(self, *args, fn=None, **kwds):
         super(Leaf, self).__init__(*args, **kwds)
         self.fn = fn
+        self.kind = 'leaf'
     
     def _get_hash(self):
         return hash_file(self.fn)
 
 
-def hash_tree(dr):
-    assert os.path.exists(dr)
+def merkle_tree(dr):
+    assert os.path.exists(dr) and os.path.isdir(dr)
     nodes = {}
     leafs = {}
     top = None
@@ -165,6 +171,9 @@ def hash_tree(dr):
                 leafs[fn] = leaf
             else:    
                 print("SKIP: {}".format(fn))
+        # add node as child to parent node, relies on top-down os.walk
+        # root        = /foo/bar/baz
+        # parent_root = /foo/bar
         nodes[root] = node
         parent_root = os.path.dirname(root)
         if parent_root in nodes.keys():
@@ -214,7 +223,7 @@ if __name__ == '__main__':
         if os.path.isfile(name):
             file_hashes[name] = hash_file(name)
         elif os.path.isdir(name):
-            tree = hash_tree(name) 
+            tree = merkle_tree(name) 
             this_file_hashes, this_dir_hashes = get_hashes(*tree)
             file_hashes.update(this_file_hashes)
             dir_hashes.update(this_dir_hashes)
@@ -243,9 +252,8 @@ if __name__ == '__main__':
                                                 dtype=int)).all():
                         continue
                 if hsh == empty:
-                    prfx = '{}:empty: '.format(typ)
+                    prfx = '{} {}:empty: '.format(hsh, typ)
                 else:     
-                    prfx = '{}: '.format(typ)
+                    prfx = '{} {}: '.format(hsh, typ)
                 for name in names:
                     print("{prfx}{name}".format(prfx=prfx, name=name))
-                print("")
