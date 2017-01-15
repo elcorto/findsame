@@ -30,9 +30,10 @@ def merge_hash(hash_lst):
         return hashsum(''.join(sort_hash_lst(hash_lst)))
     elif nn == 1:
         return hash_lst[0]
-    # XXX no childs, this happen if we really have a node (=dir) w/o childs -->
-    # OK, OR of we have only links in the dir --> NOT OK, currently we treat
-    # that dir as empty
+    # no childs, this happen if 
+    # * we really have a node (=dir) w/o childs
+    # * we have only links in the dir --> we currently we treat
+    #   that dir as empty since we ignore links
     else:
         return hashsum('')
 
@@ -164,7 +165,7 @@ def merkle_tree(dr):
             fn = os.path.join(root, base)
             if VERBOSE:
                 print(fn)
-            # XXX skipping links
+            # skipping links
             if os.path.exists(fn) and os.path.isfile(fn):
                 leaf = Leaf(name=fn, fn=fn)
                 node.add_child(leaf)
@@ -219,7 +220,7 @@ if __name__ == '__main__':
     file_hashes = _dict()
     dir_hashes = _dict()  
     for name in vars(args)['file/dir']:
-        # XXX skipping links
+        # skipping links
         if os.path.isfile(name):
             file_hashes[name] = hash_file(name)
         elif os.path.isdir(name):
