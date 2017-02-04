@@ -1,11 +1,12 @@
 findsame
 ========
 
-Small tool to find duplicate files in directories. As other tools such as
-``fdupes`` or ``fslint``'s ``fdindup`` (see
-``/usr/share/fslint/fslint/findup``), we also use simple file hashes. 
+Find duplicate files and directories. As other tools such as ``fdupes`` or
+``fslint``'s ``fdindup`` (see ``/usr/share/fslint/fslint/findup``), we also use
+simple file hashes. 
 
-But additionally, we report duplicate directories as well.
+But additionally, we report duplicate directories as well, using a
+Merkle tree for directory hash calculation.
 
 example
 -------

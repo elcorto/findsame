@@ -25,6 +25,8 @@ import numpy as np
 
 
 def merge_hash(hash_lst):
+    """Hash of a list of hash strings. Sort them first to ensure reproducible
+    results."""
     nn = len(hash_lst)
     if nn > 1:
         return hashsum(''.join(sort_hash_lst(hash_lst)))
@@ -32,18 +34,22 @@ def merge_hash(hash_lst):
         return hash_lst[0]
     # no childs, this happen if 
     # * we really have a node (=dir) w/o childs
-    # * we have only links in the dir --> we currently we treat
+    # * we have only links in the dir .. we currently treat
     #   that dir as empty since we ignore links
     else:
         return hashsum('')
 
 
 def hashsum(x):
+    """SHA1 hash of a string."""
     return hashlib.sha1(x.encode()).hexdigest()
 
 
 def hash_file(fn, blocksize=1024**2):
-    """
+    """Hash file content. Same as::
+
+        $ sha1sum <filename>
+
     Parameters
     ----------
     fn : str
@@ -73,11 +79,8 @@ def sort_hash_lst(seq):
 
 
 def split_path(path):
+    """//foo/bar/baz -> ['foo', 'bar', 'baz']"""
     return [x for x in path.split('/') if x != '']
-
-
-def _dict(*args, **kwds):
-    return dict(*args, **kwds)
 
 
 # Merkle tree
@@ -152,6 +155,9 @@ class Leaf(Element):
 
 
 def merkle_tree(dr):
+    """Construct Merkle tree from all dirs and files in directory `dr`. Don't
+    calculate hashes.
+    """
     assert os.path.exists(dr) and os.path.isdir(dr)
     nodes = {}
     leafs = {}
@@ -185,8 +191,18 @@ def merkle_tree(dr):
 
 
 def get_hashes(top, nodes, leafs):
-    # start recursive hash calculation in all childs, sets node.hash /
-    # leaf.hash
+    """Trigger recursive hash calculation in Merkle tree from merkle_tree().
+
+    Parameters
+    ----------
+    top, nodes, leafs : see merkle_tree()
+
+    Returns
+    -------
+    file_hashes, dir_hashes
+        dicts with hash strings
+    """
+    # sets node.hash / leaf.hash
     top.get_hash()
     dir_hashes = dict((k,v.hash) for k,v in nodes.items())
     file_hashes = dict((k,v.hash) for k,v in leafs.items())
@@ -194,14 +210,33 @@ def get_hashes(top, nodes, leafs):
 
 
 def find_same(hashes):
-    store = _dict()
+    """Given a dict with hash values, find all keys which have the same value
+    (hash).
+
+    Parameters
+    ----------
+    hashes: dict
+        {key1: hashA,
+         key2: hashA,
+         key3: hashB,
+         ...}
+
+
+    Returns
+    -------
+    dict
+        {hashA: [key1, key2],
+         hashB: [key3],
+         ...}
+    """
+    store = dict()
     for name,hsh in hashes.items():
         if hsh in store.keys():
             store[hsh].append(name)
         else:     
             store[hsh] = [name]
     # sort to force reproducible results        
-    return _dict((k,sort_hash_lst(v)) for k,v in store.items())
+    return dict((k,sort_hash_lst(v)) for k,v in store.items())
 
 
 if __name__ == '__main__':
@@ -217,8 +252,8 @@ if __name__ == '__main__':
     
     VERBOSE = args.verbose
         
-    file_hashes = _dict()
-    dir_hashes = _dict()  
+    file_hashes = dict()
+    dir_hashes = dict()  
     for name in vars(args)['file/dir']:
         # skipping links
         if os.path.isfile(name):
