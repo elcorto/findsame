@@ -112,7 +112,7 @@ def split_path(path):
 #  ('test/a/d', ['e'], []),
 #  ('test/a/d/e', [], ['file2'])]
 
-class Element(object):
+class Element:
     def __init__(self, name='noname'):
         self.hash = None
         self.name = name
@@ -154,59 +154,57 @@ class Leaf(Element):
         return hash_file(self.fn)
 
 
-def merkle_tree(dr):
-    """Construct Merkle tree from all dirs and files in directory `dr`. Don't
-    calculate hashes.
-    """
-    assert os.path.exists(dr) and os.path.isdir(dr)
-    nodes = {}
-    leafs = {}
-    top = None
-    for root, dirs, files in os.walk(dr):
-        # make sure os.path.dirname() returns the parent dir
-        if root.endswith('/'):
-            root = root[:-1]
-        node = Node(name=root, childs=[])
-        for base in files:
-            fn = os.path.join(root, base)
-            if VERBOSE:
-                print(fn)
-            # skipping links
-            if os.path.exists(fn) and os.path.isfile(fn):
-                leaf = Leaf(name=fn, fn=fn)
-                node.add_child(leaf)
-                leafs[fn] = leaf
-            else:    
-                print("SKIP: {}".format(fn))
-        # add node as child to parent node, relies on top-down os.walk
-        # root        = /foo/bar/baz
-        # parent_root = /foo/bar
-        nodes[root] = node
-        parent_root = os.path.dirname(root)
-        if parent_root in nodes.keys():
-            nodes[parent_root].add_child(node)
-        if top is None:
-            top = node
-    return top, nodes, leafs
+class MerkleTree:
+    def __init__(self, dr, calc=True):
+        self.dr = dr
+        assert os.path.exists(self.dr) and os.path.isdir(self.dr)
+        self.build_tree()
+        if calc:
+            self.calc_hashes()
 
+    def build_tree(self):
+        """Construct Merkle tree from all dirs and files in directory `dr`. Don't
+        calculate hashes.
+        """
+        nodes = {}
+        leafs = {}
+        top = None
+        for root, dirs, files in os.walk(self.dr):
+            # make sure os.path.dirname() returns the parent dir
+            if root.endswith('/'):
+                root = root[:-1]
+            node = Node(name=root, childs=[])
+            for base in files:
+                fn = os.path.join(root, base)
+                if VERBOSE:
+                    print(fn)
+                # skipping links
+                if os.path.exists(fn) and os.path.isfile(fn):
+                    leaf = Leaf(name=fn, fn=fn)
+                    node.add_child(leaf)
+                    leafs[fn] = leaf
+                else:    
+                    print("SKIP: {}".format(fn))
+            # add node as child to parent node, relies on top-down os.walk
+            # root        = /foo/bar/baz
+            # parent_root = /foo/bar
+            nodes[root] = node
+            parent_root = os.path.dirname(root)
+            if parent_root in nodes.keys():
+                nodes[parent_root].add_child(node)
+            if top is None:
+                top = node
+            self.top = top
+            self.nodes = nodes
+            self.leafs = leafs
 
-def get_hashes(top, nodes, leafs):
-    """Trigger recursive hash calculation in Merkle tree from merkle_tree().
-
-    Parameters
-    ----------
-    top, nodes, leafs : see merkle_tree()
-
-    Returns
-    -------
-    file_hashes, dir_hashes
-        dicts with hash strings
-    """
-    # sets node.hash / leaf.hash
-    top.get_hash()
-    dir_hashes = dict((k,v.hash) for k,v in nodes.items())
-    file_hashes = dict((k,v.hash) for k,v in leafs.items())
-    return file_hashes, dir_hashes
+    def calc_hashes(self):
+        """Trigger recursive hash calculation.
+        """
+        # sets node.hash / leaf.hash
+        self.top.get_hash()
+        self.dir_hashes = dict((k,v.hash) for k,v in self.nodes.items())
+        self.file_hashes = dict((k,v.hash) for k,v in self.leafs.items())
 
 
 def find_same(hashes):
@@ -259,10 +257,9 @@ if __name__ == '__main__':
         if os.path.isfile(name):
             file_hashes[name] = hash_file(name)
         elif os.path.isdir(name):
-            tree = merkle_tree(name) 
-            this_file_hashes, this_dir_hashes = get_hashes(*tree)
-            file_hashes.update(this_file_hashes)
-            dir_hashes.update(this_dir_hashes)
+            tree = MerkleTree(name, calc=True)
+            file_hashes.update(tree.file_hashes)
+            dir_hashes.update(tree.dir_hashes)
         else:
             print("SKIP: {}".format(name)) 
     
