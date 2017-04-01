@@ -16,7 +16,7 @@ def test_hash():
 
 def test_exe_stdout():
     here = os.path.dirname(__file__)
-    exe = '{}/../findsame.py'.format(here)
+    exe = '{}/../findsame.py -f simple'.format(here)
     for args in ['test/data', 'test/data/*']:
         out = subprocess.check_output('{} {}'.format(exe, args), shell=True)
         with open('{}/ref_output'.format(here)) as fd:

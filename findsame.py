@@ -20,7 +20,7 @@ python3
   generated with python2.
 """
 
-import os, hashlib, argparse
+import os, hashlib, argparse, json
 import numpy as np
 
 
@@ -104,7 +104,7 @@ class Element:
 
     def __repr__(self):
         return "{}:{}".format(self.kind, self.name)
-
+    
     def get_hash(self):
         if VERBOSE:
             print("get_hash: {}".format(self.name))
@@ -177,7 +177,7 @@ class MerkleTree:
             for base in files:
                 fn = os.path.join(root, base)
                 if VERBOSE:
-                    print(fn)
+                    print("build_tree: {}".format(fn))
                 # skipping links
                 if os.path.exists(fn) and os.path.isfile(fn):
                     leaf = Leaf(name=fn, fn=fn)
@@ -190,6 +190,7 @@ class MerkleTree:
             # parent_root = /foo/bar
             nodes[root] = node
             parent_root = os.path.dirname(root)
+            # XXX should always be true, eh??
             if parent_root in nodes.keys():
                 nodes[parent_root].add_child(node)
             if top is None:
@@ -208,23 +209,22 @@ class MerkleTree:
 
 
 def find_same(hashes):
-    """Given a dict with hash values, find all keys which have the same value
-    (hash).
+    """Given a dict with names and hashes, "invert" the dict to find all names
+    which have the same hash.
 
     Parameters
     ----------
     hashes: dict
-        {key1: hashA,
-         key2: hashA,
-         key3: hashB,
+        {name1: hashA,
+         name2: hashA,
+         name3: hashB,
          ...}
-
 
     Returns
     -------
     dict
-        {hashA: [key1, key2],
-         hashB: [key3],
+        {hashA: [name1, name2],
+         hashB: [name3],
          ...}
     """
     store = dict()
@@ -246,6 +246,9 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', action='store_true',
                         default=False,
                         help='verbose')
+    parser.add_argument('-f', '--format',
+                        default='json',
+                        help='text output format (simple, json) [%(default)s]')
     args = parser.parse_args()
     
     VERBOSE = args.verbose
@@ -266,9 +269,16 @@ if __name__ == '__main__':
     file_store = find_same(file_hashes)
     dir_store = find_same(dir_hashes)
     
+    # result:
+    #     {hashA: {typX: [name1, name2],
+    #              typY: [name3]},
+    #      hashB: {typX: [...]},
+    #      ...}
+    result = dict()
     empty = hashsum('')
-    for typ, dct in [('dir', dir_store), ('file', file_store)]:
-        for hsh,names in dct.items():
+    for kind, dct in [('dir', dir_store), ('file', file_store)]:
+        for hsh, names in dct.items():
+            hsh_dct = result.get(hsh, {})
             if len(names) > 1:
                 # exclude single deep files, where each upper dir has the same
                 # hash as the deep file
@@ -277,16 +287,26 @@ if __name__ == '__main__':
                 #   foo/bar/baz
                 #   foo/bar/baz/file
                 # In that case, names = ['foo', 'foo/bar', 'foo/bar/baz'] for
-                # typ=='dir'.
-                if typ == 'dir':
+                # kind=='dir'.
+                if kind == 'dir':
                     tmp = np.array([len(split_path(x)) for x in names],
                                    dtype=int)
                     if (np.diff(tmp) == np.ones((len(tmp)-1,),
                                                 dtype=int)).all():
                         continue
                 if hsh == empty:
-                    prfx = '{} {}:empty: '.format(hsh, typ)
+                    typ = '{}:empty'.format(kind)
                 else:     
-                    prfx = '{} {}: '.format(hsh, typ)
+                    typ = '{}'.format(kind)
+                typ_names = hsh_dct.get(typ, []) + names
+                hsh_dct.update({typ: typ_names})
+                result.update({hsh: hsh_dct})
+    if args.format == 'json': 
+        print(json.dumps(result))
+    elif args.format == 'simple':
+        for hsh,dct in result.items():
+            for typ,names in dct.items():
                 for name in names:
-                    print("{prfx}{name}".format(prfx=prfx, name=name))
+                    print("{hsh} {typ}: {name}".format(hsh=hsh, typ=typ, name=name))
+    else:
+        raise Exception("unknown output format")
