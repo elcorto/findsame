@@ -24,22 +24,6 @@ import os, hashlib, argparse
 import numpy as np
 
 
-def merge_hash(hash_lst):
-    """Hash of a list of hash strings. Sort them first to ensure reproducible
-    results."""
-    nn = len(hash_lst)
-    if nn > 1:
-        return hashsum(''.join(sort_hash_lst(hash_lst)))
-    elif nn == 1:
-        return hash_lst[0]
-    # no childs, this happen if 
-    # * we really have a node (=dir) w/o childs
-    # * we have only links in the dir .. we currently treat
-    #   that dir as empty since we ignore links
-    else:
-        return hashsum('')
-
-
 def hashsum(x):
     """SHA1 hash of a string."""
     return hashlib.sha1(x.encode()).hexdigest()
@@ -139,9 +123,25 @@ class Node(Element):
     
     def add_child(self, child):
         self.childs.append(child)
+    
+    @staticmethod
+    def _merge_hash(hash_lst):
+        """Hash of a list of hash strings. Sort them first to ensure reproducible
+        results."""
+        nn = len(hash_lst)
+        if nn > 1:
+            return hashsum(''.join(sort_hash_lst(hash_lst)))
+        elif nn == 1:
+            return hash_lst[0]
+        # no childs, this happen if 
+        # * we really have a node (=dir) w/o childs
+        # * we have only links in the dir .. we currently treat
+        #   that dir as empty since we ignore links
+        else:
+            return hashsum('')
 
     def _get_hash(self):
-        return merge_hash([c.get_hash() for c in self.childs])
+        return self._merge_hash([c.get_hash() for c in self.childs])
     
 
 class Leaf(Element):
