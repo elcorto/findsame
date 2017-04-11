@@ -39,8 +39,8 @@ def hash_file(fn, blocksize=1024**2):
     fn : str
         filename
     blocksize : int
-        size of block (bytes) to read at once 
-    
+        size of block (bytes) to read at once
+
     Notes
     -----
     idea stolen from: http://pythoncentral.io/hashing-files-with-python/
@@ -84,11 +84,11 @@ def split_path(path):
 #     │   └── e             # node
 #     │       └── file2     # leaf
 #     └── file3             # leaf
-# 
+#
 # 5 directories, 5 files
-# 
+#
 # In [39]: [(r,d,f) for r,d,f in os.walk('test/')]
-# Out[39]: 
+# Out[39]:
 # [('test/', ['a'], []),
 #  ('test/a', ['b', 'd'], ['file3']),
 #  ('test/a/b', ['c'], ['file5', 'file4']),
@@ -104,13 +104,13 @@ class Element:
 
     def __repr__(self):
         return "{}:{}".format(self.kind, self.name)
-    
+
     def get_hash(self):
         if VERBOSE:
             print("get_hash: {}".format(self.name))
         self.hash = self._get_hash()
         return self.hash
-    
+
     def _get_hash(self):
         raise NotImplementedError
 
@@ -120,10 +120,10 @@ class Node(Element):
         super(Node, self).__init__(*args, **kwds)
         self.childs = childs
         self.kind = 'node'
-    
+
     def add_child(self, child):
         self.childs.append(child)
-    
+
     @staticmethod
     def _merge_hash(hash_lst):
         """Hash of a list of hash strings. Sort them first to ensure reproducible
@@ -133,7 +133,7 @@ class Node(Element):
             return hashsum(''.join(sort_hash_lst(hash_lst)))
         elif nn == 1:
             return hash_lst[0]
-        # no childs, this happen if 
+        # no childs, this happen if
         # * we really have a node (=dir) w/o childs
         # * we have only links in the dir .. we currently treat
         #   that dir as empty since we ignore links
@@ -142,14 +142,14 @@ class Node(Element):
 
     def _get_hash(self):
         return self._merge_hash([c.get_hash() for c in self.childs])
-    
+
 
 class Leaf(Element):
     def __init__(self, *args, fn=None, **kwds):
         super(Leaf, self).__init__(*args, **kwds)
         self.fn = fn
         self.kind = 'leaf'
-    
+
     def _get_hash(self):
         return hash_file(self.fn)
 
@@ -183,7 +183,7 @@ class MerkleTree:
                     leaf = Leaf(name=fn, fn=fn)
                     node.add_child(leaf)
                     leafs[fn] = leaf
-                else:    
+                else:
                     print("SKIP: {}".format(fn))
             # add node as child to parent node, relies on top-down os.walk
             # root        = /foo/bar/baz
@@ -231,18 +231,18 @@ def find_same(hashes):
     for name,hsh in hashes.items():
         if hsh in store.keys():
             store[hsh].append(name)
-        else:     
+        else:
             store[hsh] = [name]
-    # sort to force reproducible results        
+    # sort to force reproducible results
     return dict((k,sort_hash_lst(v)) for k,v in store.items())
 
 
 if __name__ == '__main__':
 
     desc = "Find same files and dirs based on file hashes."
-    parser = argparse.ArgumentParser(description=desc) 
-    parser.add_argument('file/dir', nargs='+',
-                        help='files and/or dirs to compare')
+    parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument('files_dirs', nargs='*', metavar='file/dir',
+                        help='files and/or dirs to compare', default=[])
     parser.add_argument('-v', '--verbose', action='store_true',
                         default=False,
                         help='verbose')
@@ -250,12 +250,12 @@ if __name__ == '__main__':
                         default='json',
                         help='text output format (simple, json) [%(default)s]')
     args = parser.parse_args()
-    
+
     VERBOSE = args.verbose
-        
+
     file_hashes = dict()
-    dir_hashes = dict()  
-    for name in vars(args)['file/dir']:
+    dir_hashes = dict()
+    for name in args.files_dirs:
         # skipping links
         if os.path.isfile(name):
             file_hashes[name] = hash_file(name)
@@ -264,11 +264,11 @@ if __name__ == '__main__':
             file_hashes.update(tree.file_hashes)
             dir_hashes.update(tree.dir_hashes)
         else:
-            print("SKIP: {}".format(name)) 
-    
+            print("SKIP: {}".format(name))
+
     file_store = find_same(file_hashes)
     dir_store = find_same(dir_hashes)
-    
+
     # result:
     #     {hashA: {typX: [name1, name2],
     #              typY: [name3]},
@@ -296,12 +296,12 @@ if __name__ == '__main__':
                         continue
                 if hsh == empty:
                     typ = '{}:empty'.format(kind)
-                else:     
+                else:
                     typ = '{}'.format(kind)
                 typ_names = hsh_dct.get(typ, []) + names
                 hsh_dct.update({typ: typ_names})
                 result.update({hsh: hsh_dct})
-    if args.format == 'json': 
+    if args.format == 'json':
         print(json.dumps(result))
     elif args.format == 'simple':
         for hsh,dct in result.items():

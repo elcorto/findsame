@@ -12,8 +12,3 @@ in a string which we can bash, such as
 
 which should be fairly unique. At least that's one deterministic way to treat
 links.
-
-post-processing and caching
----------------------------
-By default pickle and save results and re-use them if no command line args are
-given. 
