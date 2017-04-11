@@ -17,8 +17,3 @@ post-processing and caching
 ---------------------------
 By default pickle and save results and re-use them if no command line args are
 given. 
-
-test
-----
-Add test for json output. Check nested dict comparison code from other
-projects.
