@@ -58,10 +58,6 @@ def hash_file(fn, blocksize=1024**2):
     return hasher.hexdigest()
 
 
-def sort_hash_lst(seq):
-    return np.sort(list(seq)).tolist()
-
-
 def split_path(path):
     """//foo/bar/baz -> ['foo', 'bar', 'baz']"""
     return [x for x in path.split('/') if x != '']
@@ -130,7 +126,7 @@ class Node(Element):
         results."""
         nn = len(hash_lst)
         if nn > 1:
-            return hashsum(''.join(sort_hash_lst(hash_lst)))
+            return hashsum(''.join(sorted(hash_lst)))
         elif nn == 1:
             return hash_lst[0]
         # no childs, this happen if
@@ -234,7 +230,7 @@ def find_same(hashes):
         else:
             store[hsh] = [name]
     # sort to force reproducible results
-    return dict((k,sort_hash_lst(v)) for k,v in store.items())
+    return dict((k,sorted(v)) for k,v in store.items())
 
 
 if __name__ == '__main__':
