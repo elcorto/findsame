@@ -67,14 +67,14 @@ def _preproc_simple(out, ref_fn):
     with open(ref_fn) as fd:
         ref = _mangle(fd.read())
     val = _mangle(out)
-    return val, ref
+    return val, ref, lambda x,y: x==y
 
 
 def _preproc_json(val, ref_fn):
     val = json.loads(val)
     with open(ref_fn) as fd:
         ref = json.load(fd)
-    return val, ref
+    return val, ref, lambda x,y: dict_equal(x, y)
 
 
 def test_exe_stdout():
@@ -85,5 +85,5 @@ def test_exe_stdout():
             out = subprocess.check_output('{} {}'.format(exe, args), shell=True)
             out = out.decode()
             ref_fn = '{here}/ref_output_{fmt}'.format(here=here, fmt=fmt)
-            val, ref = preproc_func(out, ref_fn) 
-            assert val == ref, "val:\n{}\nref:\n{}".format(val, ref)
+            val, ref, comp = preproc_func(out, ref_fn)
+            assert comp(val, ref), "val:\n{}\nref:\n{}".format(val, ref) 
