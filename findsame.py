@@ -20,8 +20,7 @@ python3
   generated with python2.
 """
 
-import os, hashlib, argparse, json
-import numpy as np
+import os, hashlib, argparse, json, functools
 
 
 def hashsum(x):
@@ -282,13 +281,14 @@ if __name__ == '__main__':
                 #   foo/bar/
                 #   foo/bar/baz
                 #   foo/bar/baz/file
-                # In that case, names = ['foo', 'foo/bar', 'foo/bar/baz'] for
-                # kind=='dir'.
+                # In that case for kind=='dir':
+                #   names = ['foo', 'foo/bar', 'foo/bar/baz']
+                #   lens  = [1,2,3]
+                #   diffs = [1,1,1]
                 if kind == 'dir':
-                    tmp = np.array([len(split_path(x)) for x in names],
-                                   dtype=int)
-                    if (np.diff(tmp) == np.ones((len(tmp)-1,),
-                                                dtype=int)).all():
+                    lens = [len(split_path(x)) for x in names] 
+                    diffs = map(lambda x,y: y-x, lens[:-1], lens[1:])
+                    if functools.reduce(lambda x,y: x == y == 1, diffs):
                         continue
                 if hsh == empty:
                     typ = '{}:empty'.format(kind)
