@@ -244,9 +244,6 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', action='store_true',
                         default=False,
                         help='verbose')
-    parser.add_argument('-f', '--format',
-                        default='json',
-                        help='text output format (simple, json) [%(default)s]')
     args = parser.parse_args()
 
     VERBOSE = args.verbose
@@ -300,12 +297,4 @@ if __name__ == '__main__':
                 typ_names = hsh_dct.get(typ, []) + names
                 hsh_dct.update({typ: typ_names})
                 result.update({hsh: hsh_dct})
-    if args.format == 'json':
-        print(json.dumps(result))
-    elif args.format == 'simple':
-        for hsh,dct in result.items():
-            for typ,names in dct.items():
-                for name in names:
-                    print("{hsh} {typ}: {name}".format(hsh=hsh, typ=typ, name=name))
-    else:
-        raise Exception("unknown output format")
+    print(json.dumps(result))

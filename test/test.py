@@ -62,14 +62,6 @@ def test_hash():
     assert fs.hash_file(fn) == hash_file_subprocess(fn)
 
 
-def _preproc_simple(out, ref_fn):
-    _mangle = lambda x: sort(x.splitlines()).tolist()
-    with open(ref_fn) as fd:
-        ref = _mangle(fd.read())
-    val = _mangle(out)
-    return val, ref, lambda x,y: x==y
-
-
 def _preproc_json(val, ref_fn):
     val = json.loads(val)
     with open(ref_fn) as fd:
@@ -79,8 +71,8 @@ def _preproc_json(val, ref_fn):
 
 def test_exe_stdout():
     here = os.path.dirname(__file__)
-    for fmt, preproc_func in [('json', _preproc_json), ('simple', _preproc_simple)]:
-        exe = '{here}/../findsame.py -f {fmt}'.format(here=here, fmt=fmt)
+    for fmt, preproc_func in [('json', _preproc_json)]:
+        exe = '{here}/../findsame.py'.format(here=here)
         for args in ['test/data', 'test/data/*']:
             out = subprocess.check_output('{} {}'.format(exe, args), shell=True)
             out = out.decode()
