@@ -239,7 +239,7 @@ if __name__ == '__main__':
 
     desc = "Find same files and dirs based on file hashes."
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('files_dirs', nargs='*', metavar='file/dir',
+    parser.add_argument('files_dirs', nargs='+', metavar='file/dir',
                         help='files and/or dirs to compare', default=[])
     parser.add_argument('-v', '--verbose', action='store_true',
                         default=False,
