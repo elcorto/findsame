@@ -20,7 +20,10 @@ python3
   generated with python2.
 """
 
-import os, hashlib, argparse, json, functools
+import os, hashlib, argparse, json, functools, sys
+
+def debug_msg(msg):
+    sys.stderr.write(msg + "\n")
 
 
 def hashsum(x):
@@ -102,7 +105,7 @@ class Element:
 
     def get_hash(self):
         if VERBOSE:
-            print("get_hash: {}".format(self.name))
+            debug_msg("get_hash: {}".format(self.name))
         self.hash = self._get_hash()
         return self.hash
 
@@ -172,14 +175,14 @@ class MerkleTree:
             for base in files:
                 fn = os.path.join(root, base)
                 if VERBOSE:
-                    print("build_tree: {}".format(fn))
+                    debug_msg("build_tree: {}".format(fn))
                 # skipping links
                 if os.path.exists(fn) and os.path.isfile(fn):
                     leaf = Leaf(name=fn, fn=fn)
                     node.add_child(leaf)
                     leafs[fn] = leaf
                 else:
-                    print("SKIP: {}".format(fn))
+                    debug_msg("SKIP: {}".format(fn))
             # add node as child to parent node, relies on top-down os.walk
             # root        = /foo/bar/baz
             # parent_root = /foo/bar
@@ -259,7 +262,7 @@ if __name__ == '__main__':
             file_hashes.update(tree.file_hashes)
             dir_hashes.update(tree.dir_hashes)
         else:
-            print("SKIP: {}".format(name))
+            debug_msg("SKIP: {}".format(name))
 
     file_store = find_same(file_hashes)
     dir_store = find_same(dir_hashes)
