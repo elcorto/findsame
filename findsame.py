@@ -22,6 +22,25 @@ python3
 
 import os, hashlib, argparse, json, functools, sys
 
+
+class lazyprop(object):
+    """Decorator for creating lazy evaluated properties.
+    The property should represent non-mutable data, as it replaces itself.
+    
+    kudos: Cyclone over at stackoverflow!
+    http://stackoverflow.com/questions/3012421/python-lazy-property-decorator
+    """
+    def __init__(self,fget):
+        self.fget = fget
+        self.func_name = fget.__name__
+
+    def __get__(self,obj,cls):
+        if obj is None:
+            return None
+        value = self.fget(obj)
+        setattr(obj,self.func_name,value)
+        return value
+
 def debug_msg(msg):
     sys.stderr.write(msg + "\n")
 
@@ -96,18 +115,17 @@ def split_path(path):
 
 class Element:
     def __init__(self, name='noname'):
-        self.hash = None
         self.name = name
         self.kind = None
 
     def __repr__(self):
         return "{}:{}".format(self.kind, self.name)
-
-    def get_hash(self):
+    
+    @lazyprop
+    def hash(self):
         if VERBOSE:
-            debug_msg("get_hash: {}".format(self.name))
-        self.hash = self._get_hash()
-        return self.hash
+            debug_msg("hash: {}".format(self.name))
+        return self._get_hash()
 
     def _get_hash(self):
         raise NotImplementedError
@@ -139,7 +157,7 @@ class Node(Element):
             return hashsum('')
 
     def _get_hash(self):
-        return self._merge_hash([c.get_hash() for c in self.childs])
+        return self._merge_hash([c.hash for c in self.childs])
 
 
 class Leaf(Element):
@@ -198,12 +216,9 @@ class MerkleTree:
             self.leafs = leafs
 
     def calc_hashes(self):
-        """Trigger recursive hash calculation.
-        """
-        # sets node.hash / leaf.hash
-        self.top.get_hash()
-        self.dir_hashes = dict((k,v.hash) for k,v in self.nodes.items())
+        """Trigger recursive hash calculation."""
         self.file_hashes = dict((k,v.hash) for k,v in self.leafs.items())
+        self.dir_hashes = dict((k,v.hash) for k,v in self.nodes.items())
 
 
 def find_same(hashes):
