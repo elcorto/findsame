@@ -71,11 +71,12 @@ def _preproc_json(val, ref_fn):
 
 def test_exe_stdout():
     here = os.path.dirname(__file__)
-    for fmt, preproc_func in [('json', _preproc_json)]:
-        exe = '{here}/../findsame.py'.format(here=here)
-        for args in ['test/data', 'test/data/*']:
-            out = subprocess.check_output('{} {}'.format(exe, args), shell=True)
-            out = out.decode()
-            ref_fn = '{here}/ref_output_{fmt}'.format(here=here, fmt=fmt)
-            val, ref, comp = preproc_func(out, ref_fn)
-            assert comp(val, ref), "val:\n{}\nref:\n{}".format(val, ref) 
+    for opts in ['', '-v', '-n 2']:
+        for fmt, preproc_func in [('json', _preproc_json)]:
+            exe = '{here}/../findsame.py {opts} 2>/dev/null'.format(here=here, opts=opts)
+            for args in ['test/data', 'test/data/*']:
+                out = subprocess.check_output('{} {}'.format(exe, args), shell=True)
+                out = out.decode()
+                ref_fn = '{here}/ref_output_{fmt}'.format(here=here, fmt=fmt)
+                val, ref, comp = preproc_func(out, ref_fn)
+                assert comp(val, ref), "val:\n{}\nref:\n{}".format(val, ref) 

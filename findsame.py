@@ -21,6 +21,7 @@ python3
 """
 
 import os, hashlib, argparse, json, functools, sys
+from multiprocessing import Pool
 
 
 class lazyprop(object):
@@ -40,6 +41,7 @@ class lazyprop(object):
         value = self.fget(obj)
         setattr(obj,self.func_name,value)
         return value
+
 
 def debug_msg(msg):
     sys.stderr.write(msg + "\n")
@@ -171,7 +173,8 @@ class Leaf(Element):
 
 
 class MerkleTree:
-    def __init__(self, dr, calc=True):
+    def __init__(self, dr, calc=True, ncores=None):
+        self.ncores = ncores
         self.dr = dr
         assert os.path.exists(self.dr) and os.path.isdir(self.dr)
         self.build_tree()
@@ -214,10 +217,24 @@ class MerkleTree:
             self.top = top
             self.nodes = nodes
             self.leafs = leafs
+    
+    # pool.map(lambda kv: (k, v.hash), ...) in calc_hashes() doesn't work,
+    # error is "Can't pickle ... lambda ...", same with defining _worker()
+    # inside calc_hashes(), need to def it in outer scope
+    @staticmethod
+    def _worker(kv):
+        return kv[0], kv[1].hash
 
     def calc_hashes(self):
         """Trigger recursive hash calculation."""
-        self.file_hashes = dict((k,v.hash) for k,v in self.leafs.items())
+        # leafs can be calculated in parallel since there are no dependencies,
+        # but the whole operation is about 50% IO-bound, speedup is moderate or
+        # even < 1
+        if self.ncores:
+            with Pool(self.ncores) as pool:
+                self.file_hashes = dict(pool.map(self._worker, self.leafs.items()))
+        else:
+            self.file_hashes = dict((k,v.hash) for k,v in self.leafs.items())
         self.dir_hashes = dict((k,v.hash) for k,v in self.nodes.items())
 
 
@@ -259,6 +276,10 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', action='store_true',
                         default=False,
                         help='verbose')
+    parser.add_argument('-n', '--ncores', type=int,
+                        default=None,
+                        help='number of processes for parallel hash calc '
+                             'in Merkle tree')
     args = parser.parse_args()
 
     VERBOSE = args.verbose
@@ -270,7 +291,7 @@ if __name__ == '__main__':
         if os.path.isfile(name):
             file_hashes[name] = hash_file(name)
         elif os.path.isdir(name):
-            tree = MerkleTree(name, calc=True)
+            tree = MerkleTree(name, calc=True, ncores=args.ncores)
             file_hashes.update(tree.file_hashes)
             dir_hashes.update(tree.dir_hashes)
         else:
