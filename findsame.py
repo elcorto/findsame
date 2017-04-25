@@ -23,6 +23,7 @@ python3
 import os, hashlib, argparse, json, functools, sys
 from multiprocessing import Pool
 
+VERBOSE = False
 
 class lazyprop(object):
     """Decorator for creating lazy evaluated properties.
@@ -52,7 +53,7 @@ def hashsum(x):
     return hashlib.sha1(x.encode()).hexdigest()
 
 
-def hash_file(fn, blocksize=1024**2):
+def hash_file(fn, blocksize=None):
     """Hash file content. Same as::
 
         $ sha1sum <filename>
@@ -118,7 +119,6 @@ def split_path(path):
 class Element:
     def __init__(self, name='noname'):
         self.name = name
-        self.kind = None
 
     def __repr__(self):
         return "{}:{}".format(self.kind, self.name)
@@ -137,7 +137,6 @@ class Node(Element):
     def __init__(self, *args, childs=None, **kwds):
         super(Node, self).__init__(*args, **kwds)
         self.childs = childs
-        self.kind = 'node'
 
     def add_child(self, child):
         self.childs.append(child)
@@ -163,18 +162,19 @@ class Node(Element):
 
 
 class Leaf(Element):
-    def __init__(self, *args, fn=None, **kwds):
+    def __init__(self, *args, fn=None, blocksize=None, **kwds):
         super(Leaf, self).__init__(*args, **kwds)
         self.fn = fn
-        self.kind = 'leaf'
+        self.blocksize = blocksize
 
     def _get_hash(self):
-        return hash_file(self.fn)
+        return hash_file(self.fn, blocksize=self.blocksize)
 
 
 class MerkleTree:
-    def __init__(self, dr, calc=True, ncores=None):
+    def __init__(self, dr, calc=True, ncores=None, blocksize=1024**2):
         self.ncores = ncores
+        self.blocksize = blocksize
         self.dr = dr
         assert os.path.exists(self.dr) and os.path.isdir(self.dr)
         self.build_tree()
@@ -199,7 +199,7 @@ class MerkleTree:
                     debug_msg("build_tree: {}".format(fn))
                 # skipping links
                 if os.path.exists(fn) and os.path.isfile(fn):
-                    leaf = Leaf(name=fn, fn=fn)
+                    leaf = Leaf(name=fn, fn=fn, blocksize=self.blocksize)
                     node.add_child(leaf)
                     leafs[fn] = leaf
                 else:
@@ -238,7 +238,7 @@ class MerkleTree:
         self.dir_hashes = dict((k,v.hash) for k,v in self.nodes.items())
 
 
-def find_same(hashes):
+def invert_dict(hashes):
     """Given a dict with names and hashes, "invert" the dict to find all names
     which have the same hash.
 
@@ -267,38 +267,23 @@ def find_same(hashes):
     return dict((k,sorted(v)) for k,v in store.items())
 
 
-if __name__ == '__main__':
-
-    desc = "Find same files and dirs based on file hashes."
-    parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('files_dirs', nargs='+', metavar='file/dir',
-                        help='files and/or dirs to compare', default=[])
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        default=False,
-                        help='verbose')
-    parser.add_argument('-n', '--ncores', type=int,
-                        default=None,
-                        help='number of processes for parallel hash calc '
-                             'in Merkle tree')
-    args = parser.parse_args()
-
-    VERBOSE = args.verbose
-
+def main(files_dirs, ncores=None, blocksize=1024**2):
     file_hashes = dict()
     dir_hashes = dict()
-    for name in args.files_dirs:
+    for name in files_dirs:
         # skipping links
         if os.path.isfile(name):
-            file_hashes[name] = hash_file(name)
+            file_hashes[name] = hash_file(name, blocksize)
         elif os.path.isdir(name):
-            tree = MerkleTree(name, calc=True, ncores=args.ncores)
+            tree = MerkleTree(name, calc=True, ncores=ncores,
+                              blocksize=blocksize)
             file_hashes.update(tree.file_hashes)
             dir_hashes.update(tree.dir_hashes)
         else:
             debug_msg("SKIP: {}".format(name))
 
-    file_store = find_same(file_hashes)
-    dir_store = find_same(dir_hashes)
+    file_store = invert_dict(file_hashes)
+    dir_store = invert_dict(dir_hashes)
 
     # result:
     #     {hashA: {typX: [name1, name2],
@@ -333,4 +318,25 @@ if __name__ == '__main__':
                 typ_names = hsh_dct.get(typ, []) + names
                 hsh_dct.update({typ: typ_names})
                 result.update({hsh: hsh_dct})
-    print(json.dumps(result))
+    return result
+
+if __name__ == '__main__':
+
+    desc = "Find same files and dirs based on file hashes."
+    parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument('files_dirs', nargs='+', metavar='file/dir',
+                        help='files and/or dirs to compare', default=[])
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        default=False,
+                        help='verbose')
+    parser.add_argument('-n', '--ncores', type=int,
+                        default=None,
+                        help='number of processes for parallel hash calc '
+                             'in Merkle tree')
+    parser.add_argument('-b', '--blocksize', type=int,
+                        default=1024**2,
+                        help='read-in blocksize (byte) in hash calculation '
+                             '[%(default)s]')
+    args = parser.parse_args()
+    VERBOSE = args.verbose 
+    print(json.dumps(main(args.files_dirs, args.ncores, args.blocksize)))
