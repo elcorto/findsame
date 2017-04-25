@@ -24,6 +24,7 @@ import os, hashlib, argparse, json, functools, sys
 from multiprocessing import Pool
 
 VERBOSE = False
+BLOCKSIZE = 1024**2
 
 class lazyprop(object):
     """Decorator for creating lazy evaluated properties.
@@ -53,7 +54,7 @@ def hashsum(x):
     return hashlib.sha1(x.encode()).hexdigest()
 
 
-def hash_file(fn, blocksize=None):
+def hash_file(fn, blocksize=BLOCKSIZE):
     """Hash file content. Same as::
 
         $ sha1sum <filename>
@@ -162,7 +163,7 @@ class Node(Element):
 
 
 class Leaf(Element):
-    def __init__(self, *args, fn=None, blocksize=None, **kwds):
+    def __init__(self, *args, fn=None, blocksize=BLOCKSIZE, **kwds):
         super(Leaf, self).__init__(*args, **kwds)
         self.fn = fn
         self.blocksize = blocksize
@@ -172,7 +173,7 @@ class Leaf(Element):
 
 
 class MerkleTree:
-    def __init__(self, dr, calc=True, ncores=None, blocksize=1024**2):
+    def __init__(self, dr, calc=True, ncores=None, blocksize=BLOCKSIZE):
         self.ncores = ncores
         self.blocksize = blocksize
         self.dr = dr
@@ -267,7 +268,7 @@ def invert_dict(hashes):
     return dict((k,sorted(v)) for k,v in store.items())
 
 
-def main(files_dirs, ncores=None, blocksize=1024**2):
+def main(files_dirs, ncores=None, blocksize=BLOCKSIZE):
     file_hashes = dict()
     dir_hashes = dict()
     for name in files_dirs:
@@ -334,7 +335,7 @@ if __name__ == '__main__':
                         help='number of processes for parallel hash calc '
                              'in Merkle tree')
     parser.add_argument('-b', '--blocksize', type=int,
-                        default=1024**2,
+                        default=BLOCKSIZE,
                         help='read-in blocksize (byte) in hash calculation '
                              '[%(default)s]')
     args = parser.parse_args()
