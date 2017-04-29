@@ -231,7 +231,7 @@ class MerkleTree:
         # leafs can be calculated in parallel since there are no dependencies,
         # but the whole operation is about 50% IO-bound, speedup is moderate or
         # even < 1
-        if self.ncores:
+        if (self.ncores is not None) and (self.ncores > 1):
             with Pool(self.ncores) as pool:
                 self.file_hashes = dict(pool.map(self._worker, self.leafs.items()))
         else:
