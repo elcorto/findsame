@@ -141,3 +141,26 @@ All but first::
 tests
 -----
 Run ``nosetests3`` (maybe ``apt-get install python3-nose`` before (Debian)).
+
+benchmarks
+----------
+You may run the benchmark suite to find the best blocksize and number of cores
+for hash calculations::
+
+    $ cd benchmark
+    $ ./benchmark.py /path/to/tmpdir
+    $ ./plot.py /path/to/tmpdir
+
+This writes test files of various size to ``/path/to/tmpdir``. Tune
+``collection_size`` in ``benchmark.py`` for more and bigger test files.
+
+Bottom line:
+
+* blocksizes around 512 kiB (``--blocksize 524288``) work best for all file
+  sizes, even though the variation to worst timings is at most factor 1.25
+  (e.g. 1 vs. 1.25 seconds)
+* don't use multiple cores as this actually slows things down since the hashing
+  seems to be IO-bound (reading is slower than hashing blocks)
+* there is a strong dependence on file size (up to factor 2), may be related to
+  disk cache size (runtime keeps increasing until certain characteristic file
+  sizes and then drops) .. not fully investigated yet
