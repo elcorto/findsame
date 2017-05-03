@@ -16,6 +16,10 @@
       "test/data/empty_dir_copy"
     ],
     "file:empty": [
+      "test/data/dir2/empty_dir/empty_file",
+      "test/data/dir2/empty_dir_copy/empty_file",
+      "test/data/empty_dir/empty_file",
+      "test/data/empty_dir_copy/empty_file",
       "test/data/empty_file",
       "test/data/empty_file_copy"
     ]

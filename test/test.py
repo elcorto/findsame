@@ -10,13 +10,17 @@ pj = os.path.join
 
 def dict_equal(aa, bb):
     if set(aa.keys()) != set(bb.keys()):
+        print("keys not equal:\naa: {}\nbb: {}".format(aa.keys(), bb.keys()))
         return False
     for akey, aval in aa.items():
+        xx = aval
+        yy = bb[akey]
         if isinstance(aval, dict):
-            if not dict_equal(aval, bb[akey]):
+            if not dict_equal(xx, yy):
                 return False
         else:
-            if not aval == bb[akey]:
+            if not xx == yy:
+                print("vals not equal:\naa: {}\nbb: {}".format(xx, yy))
                 return False
     return True
 
