@@ -112,9 +112,9 @@ pj = os.path.join
 # constants
 #------------------------------------------------------------------------------
 
-kiB = 1024
-MiB = kiB**2
-GiB = kiB**3
+KiB = 1024
+MiB = KiB**2
+GiB = KiB**3
 
 
 #------------------------------------------------------------------------------
@@ -190,7 +190,7 @@ def run(df, func, params):
 
 def size2str(filesize, sep=''):
     """Convert size in bytes to string with unit."""
-    div = [(GiB, 'G'), (MiB, 'M'), (kiB, 'k'), (1, 'B')]
+    div = [(GiB, 'G'), (MiB, 'M'), (KiB, 'K'), (1, 'B')]
     for divsize, symbol in div:
         if filesize // divsize == 0:
             continue
@@ -281,11 +281,11 @@ def main(tmpdir):
     params = []
 
     # test individual file sizes
-    cases = [(bytes_linspace(128*kiB, collection_size, 4),
-              bytes_logspace(10*kiB, collection_size, 10),
+    cases = [(bytes_linspace(128*KiB, collection_size, 4),
+              bytes_logspace(10*KiB, collection_size, 10),
               'blocksize'),
-             (bytes_linspace(128*kiB, collection_size, 40),
-              [64*kiB, 512*kiB],
+             (bytes_linspace(128*KiB, collection_size, 40),
+              [64*KiB, 512*KiB],
               'filesize')]
 
     for filesize, blocksize, study in cases:
@@ -306,8 +306,8 @@ def main(tmpdir):
 ##    params = params_filter(params)
 
     # collection of different file sizes
-    filesize = bytes_linspace(128*kiB, collection_size, 5)
-    blocksize = [512*kiB]
+    filesize = bytes_linspace(128*KiB, collection_size, 5)
+    blocksize = [512*KiB]
     testdir = mkdtemp(dir=tmpdir)
     filesize_dr = write(testdir, filesize, collection_size)
 

@@ -24,7 +24,7 @@ import os, hashlib, argparse, json, functools, sys
 from multiprocessing import Pool
 
 VERBOSE = False
-BLOCKSIZE = 1024**2
+BLOCKSIZE = 512*1024
 
 class lazyprop(object):
     """Decorator for creating lazy evaluated properties.
