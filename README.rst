@@ -49,33 +49,6 @@ the test suite data::
 
 	$ ./findsame.py test/data | jq .
 	{
-	  "55341fe74a3497b53438f9b724b3e8cdaf728edc": {
-		"dir": [
-		  "test/data/dir1",
-		  "test/data/dir1_copy"
-		]
-	  },
-	  "9619a9b308cdebee40f6cef018fef0f4d0de2939": {
-		"file": [
-		  "test/data/dir1/file2",
-		  "test/data/dir1/file2_copy",
-		  "test/data/dir1_copy/file2",
-		  "test/data/dir1_copy/file2_copy",
-		  "test/data/file2"
-		]
-	  },
-	  "da39a3ee5e6b4b0d3255bfef95601890afd80709": {
-		"dir:empty": [
-		  "test/data/dir2/empty_dir",
-		  "test/data/dir2/empty_dir_copy",
-		  "test/data/empty_dir",
-		  "test/data/empty_dir_copy"
-		],
-		"file:empty": [
-		  "test/data/empty_file",
-		  "test/data/empty_file_copy"
-		]
-	  },
 	  "0a96c2e755258bd46abdde729f8ee97d234dd04e": {
 		"file": [
 		  "test/data/lena.png",
@@ -87,39 +60,114 @@ the test suite data::
 		  "test/data/file1",
 		  "test/data/file1_copy"
 		]
+	  },
+	  "55341fe74a3497b53438f9b724b3e8cdaf728edc": {
+		"dir": [
+		  "test/data/dir1",
+		  "test/data/dir1_copy"
+		]
+	  },
+	  "da39a3ee5e6b4b0d3255bfef95601890afd80709": {
+		"file:empty": [
+		  "test/data/dir2/empty_dir/empty_file",
+		  "test/data/dir2/empty_dir_copy/empty_file",
+		  "test/data/empty_dir/empty_file",
+		  "test/data/empty_dir_copy/empty_file",
+		  "test/data/empty_file",
+		  "test/data/empty_file_copy"
+		],
+		"dir:empty": [
+		  "test/data/dir2/empty_dir",
+		  "test/data/dir2/empty_dir_copy",
+		  "test/data/empty_dir",
+		  "test/data/empty_dir_copy"
+		]
+	  },
+	  "9619a9b308cdebee40f6cef018fef0f4d0de2939": {
+		"file": [
+		  "test/data/dir1/file2",
+		  "test/data/dir1/file2_copy",
+		  "test/data/dir1_copy/file2",
+		  "test/data/dir1_copy/file2_copy",
+		  "test/data/file2"
+		]
 	  }
 	}
 
+
+Note that the order of key-value entries in the output from both
+``findsame.py`` and ``jq`` is random.
+
 Post-processing is only limited by your ability to process json (using ``jq``,
-Python, ...). In case of equal files/dirs, a common task is to
-find the first or *all but* the first elements in a group of same-hash files/dirs.
+Python, ...). In case of equal files/dirs, a common task is to find the first
+or *all but* the first elements in a group of same-hash files/dirs.
 
 Find first element::
 
-	$ ./findsame.py test/data | jq 'map_values(map_values(.[0]))'
+	$ ./findsame.py test/data | jq 'map_values(map_values([.[0]]))'
 	{
-	  "0a96c2e755258bd46abdde729f8ee97d234dd04e": {
-		"file": "test/data/lena.png"
-	  },
 	  "9619a9b308cdebee40f6cef018fef0f4d0de2939": {
-		"file": "test/data/dir1/file2"
+		"file": [
+		  "test/data/dir1/file2"
+		]
 	  },
-	  "da39a3ee5e6b4b0d3255bfef95601890afd80709": {
-		"file:empty": "test/data/empty_file",
-		"dir:empty": "test/data/dir2/empty_dir"
+	  "0a96c2e755258bd46abdde729f8ee97d234dd04e": {
+		"file": [
+		  "test/data/lena.png"
+		]
 	  },
 	  "312382290f4f71e7fb7f00449fb529fce3b8ec95": {
-		"file": "test/data/file1"
+		"file": [
+		  "test/data/file1"
+		]
+	  },
+	  "da39a3ee5e6b4b0d3255bfef95601890afd80709": {
+		"file:empty": [
+		  "test/data/dir2/empty_dir/empty_file"
+		],
+		"dir:empty": [
+		  "test/data/dir2/empty_dir"
+		]
 	  },
 	  "55341fe74a3497b53438f9b724b3e8cdaf728edc": {
-		"dir": "test/data/dir1"
+		"dir": [
+		  "test/data/dir1"
+		]
 	  }
 	}
+
+or ``jq 'map_values(map_values(.[0]))'`` if you don't want a length-one list.
+
+Only the values::
+
+	$ ./findsame.py test/data | jq '.[]|.[]|.[0]'
+	"test/data/dir1"
+	"test/data/lena.png"
+	"test/data/file1"
+	"test/data/dir1/file2"
+	"test/data/dir2/empty_dir/empty_file"
+	"test/data/dir2/empty_dir"
+
+Test if we got the same::
+
+	$ ./findsame.py test/data | jq 'map_values(map_values(.[0]))|.[]|.[]' | sort > aa
+	$ ./findsame.py test/data | jq '.[]|.[]|.[0]' | sort > bb
+	$ diff aa bb
 
 All but first::
 
 	$ ./findsame.py test/data | jq 'map_values(map_values(.[1:]))'
 	{
+	  "312382290f4f71e7fb7f00449fb529fce3b8ec95": {
+		"file": [
+		  "test/data/file1_copy"
+		]
+	  },
+	  "55341fe74a3497b53438f9b724b3e8cdaf728edc": {
+		"dir": [
+		  "test/data/dir1_copy"
+		]
+	  },
 	  "da39a3ee5e6b4b0d3255bfef95601890afd80709": {
 		"dir:empty": [
 		  "test/data/dir2/empty_dir_copy",
@@ -127,7 +175,16 @@ All but first::
 		  "test/data/empty_dir_copy"
 		],
 		"file:empty": [
+		  "test/data/dir2/empty_dir_copy/empty_file",
+		  "test/data/empty_dir/empty_file",
+		  "test/data/empty_dir_copy/empty_file",
+		  "test/data/empty_file",
 		  "test/data/empty_file_copy"
+		]
+	  },
+	  "0a96c2e755258bd46abdde729f8ee97d234dd04e": {
+		"file": [
+		  "test/data/lena_copy.png"
 		]
 	  },
 	  "9619a9b308cdebee40f6cef018fef0f4d0de2939": {
@@ -137,24 +194,33 @@ All but first::
 		  "test/data/dir1_copy/file2_copy",
 		  "test/data/file2"
 		]
-	  },
-	  "0a96c2e755258bd46abdde729f8ee97d234dd04e": {
-		"file": [
-		  "test/data/lena_copy.png"
-		]
-	  },
-	  "55341fe74a3497b53438f9b724b3e8cdaf728edc": {
-		"dir": [
-		  "test/data/dir1_copy"
-		]
-	  },
-	  "312382290f4f71e7fb7f00449fb529fce3b8ec95": {
-		"file": [
-		  "test/data/file1_copy"
-		]
 	  }
 	}
 
+Values::
+
+	$ ./findsame.py test/data | jq '.[]|.[]|.[1:]|.[]'
+	"test/data/dir2/empty_dir_copy"
+	"test/data/empty_dir"
+	"test/data/empty_dir_copy"
+	"test/data/dir2/empty_dir_copy/empty_file"
+	"test/data/empty_dir/empty_file"
+	"test/data/empty_dir_copy/empty_file"
+	"test/data/empty_file"
+	"test/data/empty_file_copy"
+	"test/data/dir1_copy"
+	"test/data/lena_copy.png"
+	"test/data/file1_copy"
+	"test/data/dir1/file2_copy"
+	"test/data/dir1_copy/file2"
+	"test/data/dir1_copy/file2_copy"
+	"test/data/file2"
+
+Test if we produce the same output::
+
+	$ ./findsame.py test/data | jq 'map_values(map_values(.[1:]))|.[]|.[]|.[]' | sort > aa
+	$ ./findsame.py test/data | jq '.[]|.[]|.[1:]|.[]' | sort > bb
+	$ diff aa bb
 
 tests
 -----
