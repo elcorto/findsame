@@ -183,8 +183,8 @@ class MerkleTree:
             self.calc_hashes()
 
     def build_tree(self):
-        """Construct Merkle tree from all dirs and files in directory `dr`. Don't
-        calculate hashes.
+        """Construct Merkle tree from all dirs and files in directory
+        `self.dr`. Don't calculate hashes.
         """
         nodes = {}
         leafs = {}
@@ -239,31 +239,31 @@ class MerkleTree:
         self.dir_hashes = dict((k,v.hash) for k,v in self.nodes.items())
 
 
-def invert_dict(hashes):
-    """Given a dict with names and hashes, "invert" the dict to find all names
+def invert_dict(dct):
+    """Given a dict with paths and hashes, "invert" the dict to find all paths
     which have the same hash.
 
     Parameters
     ----------
-    hashes: dict
-        {name1: hashA,
-         name2: hashA,
-         name3: hashB,
+    dct: dict
+        {path1: hashA,
+         path2: hashA,
+         path3: hashB,
          ...}
 
     Returns
     -------
     dict
-        {hashA: [name1, name2],
-         hashB: [name3],
+        {hashA: [path1, path2],
+         hashB: [path3],
          ...}
     """
     store = dict()
-    for name,hsh in hashes.items():
+    for path,hsh in dct.items():
         if hsh in store.keys():
-            store[hsh].append(name)
+            store[hsh].append(path)
         else:
-            store[hsh] = [name]
+            store[hsh] = [path]
     # sort to force reproducible results
     return dict((k,sorted(v)) for k,v in store.items())
 
@@ -271,32 +271,32 @@ def invert_dict(hashes):
 def main(files_dirs, ncores=None, blocksize=BLOCKSIZE):
     file_hashes = dict()
     dir_hashes = dict()
-    for name in files_dirs:
+    for path in files_dirs:
         # skipping links
-        if os.path.isfile(name):
-            file_hashes[name] = hash_file(name, blocksize)
-        elif os.path.isdir(name):
-            tree = MerkleTree(name, calc=True, ncores=ncores,
+        if os.path.isfile(path):
+            file_hashes[path] = hash_file(path, blocksize)
+        elif os.path.isdir(path):
+            tree = MerkleTree(path, calc=True, ncores=ncores,
                               blocksize=blocksize)
             file_hashes.update(tree.file_hashes)
             dir_hashes.update(tree.dir_hashes)
         else:
-            debug_msg("SKIP: {}".format(name))
+            debug_msg("SKIP: {}".format(path))
 
     file_store = invert_dict(file_hashes)
     dir_store = invert_dict(dir_hashes)
 
     # result:
-    #     {hashA: {typX: [name1, name2],
-    #              typY: [name3]},
+    #     {hashA: {typX: [path1, path2],
+    #              typY: [path3]},
     #      hashB: {typX: [...]},
     #      ...}
     result = dict()
     empty = hashsum('')
     for kind, dct in [('dir', dir_store), ('file', file_store)]:
-        for hsh, names in dct.items():
+        for hsh, paths in dct.items():
             hsh_dct = result.get(hsh, {})
-            if len(names) > 1:
+            if len(paths) > 1:
                 # exclude single deep files, where each upper dir has the same
                 # hash as the deep file
                 #   foo/
@@ -304,11 +304,11 @@ def main(files_dirs, ncores=None, blocksize=BLOCKSIZE):
                 #   foo/bar/baz
                 #   foo/bar/baz/file
                 # In that case for kind=='dir':
-                #   names = ['foo', 'foo/bar', 'foo/bar/baz']
+                #   paths = ['foo', 'foo/bar', 'foo/bar/baz']
                 #   lens  = [1,2,3]
                 #   diffs = [1,1,1]
                 if kind == 'dir':
-                    lens = [len(split_path(x)) for x in names] 
+                    lens = [len(split_path(x)) for x in paths] 
                     diffs = map(lambda x,y: y-x, lens[:-1], lens[1:])
                     if functools.reduce(lambda x,y: x == y == 1, diffs):
                         continue
@@ -316,8 +316,8 @@ def main(files_dirs, ncores=None, blocksize=BLOCKSIZE):
                     typ = '{}:empty'.format(kind)
                 else:
                     typ = '{}'.format(kind)
-                typ_names = hsh_dct.get(typ, []) + names
-                hsh_dct.update({typ: typ_names})
+                typ_paths = hsh_dct.get(typ, []) + paths
+                hsh_dct.update({typ: typ_paths})
                 result.update({hsh: hsh_dct})
     return result
 
