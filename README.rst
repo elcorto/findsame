@@ -209,13 +209,11 @@ for hash calculations::
     $ rm -rf files results.json; ./benchmark.py
 
 This writes test files of various size to ``benchmark/files``. Tune
-``collection_size`` in ``benchmark.main()`` for more and bigger test files.
-A collection is a number of files whose total size is ``collection_size``.
-Default is 100 MiB, i.e. files from 1 x 100MiB to 800 x 128 kiB files.
+``scale`` in ``benchmark.main()`` for more and bigger test files.
 
 Bottom line (test system: Lenovo E330, Samsung 840 Evo SSD, Core i3-3120M)
 
-* blocksizes around 512 kiB (``--blocksize 524288``) work best for all file
+* blocksizes around 256 kiB (``--blocksize 262144``) work best for all file
   sizes, even though the variation to worst timings is at most factor 1.25
   (e.g. 1 vs. 1.25 seconds)
 * using multiple cores actually slows things down since the hashing seems to be

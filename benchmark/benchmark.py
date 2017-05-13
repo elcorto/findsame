@@ -210,26 +210,29 @@ def bytes_linspace(start, stop, num):
                                  num).astype(int))
 
 
-def write(testdir, filesize_lst, collection_size):
-    assert filesize_lst.max() <= collection_size
-    print("writing data")
-    filesize_dr_lst = []
-    for filesize in filesize_lst:
+def write_file_groups(testdir, sizes, group_size=None):
+    if group_size is None:
+        group_size = max(sizes)
+    else:
+        assert group_size >= max(sizes)
+    print("writing file groups, group_size: {}".format(size2str(group_size)))
+    group_dirs = []
+    for filesize in sizes:
         filesize_str = size2str(filesize)
-        print("filesize: {}".format(filesize_str))
+        print("  filesize: {}".format(filesize_str))
         dr = pj(testdir, 'filesize_{}'.format(filesize_str))
-        filesize_dr_lst.append(dr)
+        group_dirs.append(dr)
         if not os.path.exists(dr):
             os.makedirs(dr, exist_ok=True)
-            nfiles = collection_size // filesize
+            nfiles = int(group_size) // int(filesize)
             data = b'x'*filesize
             for idx in range(nfiles):
                 fn = pj(dr, 'file_{}'.format(idx))
                 with open(fn, 'wb') as fd:
                     fd.write(data)
         else:
-            print('already there: {}'.format(dr))
-    return filesize_dr_lst
+            print('    dir already present: {}'.format(dr))
+    return group_dirs
 
 
 def func(dct, stmt=None, setup=None):
@@ -282,42 +285,56 @@ def main(tmpdir):
     stmt = "fs.main({files_dirs}, ncores={ncores}, blocksize={blocksize})"
 
     df = pd.DataFrame()
-    collection_size = 100*MiB
     params = []
-
-    # test individual file sizes
-    cases = [(bytes_linspace(128*KiB, collection_size, 4),
-              bytes_logspace(10*KiB, collection_size, 10),
-              'blocksize'),
-             (bytes_linspace(128*KiB, collection_size, 40),
-              [64*KiB, 512*KiB],
-              'filesize')]
+    scale = 0.1
+    
+    cases = [##(bytes_linspace(128*KiB, scale*100*MiB, 3),
+             ## bytes_logspace(10*KiB, scale*100*MiB, 10),
+             ## 'blocksize_single'),
+             (bytes_linspace(128*KiB, scale*100*MiB, 30),
+              [64*KiB, 256*KiB],
+              'filesize_single')]
 
     for filesize, blocksize, study in cases:
-        testdir = mkdtemp(dir=tmpdir)
-        filesize_dr = write(testdir, filesize, collection_size)
+        testdir = mkdtemp(dir=tmpdir, prefix=study)
+        group_dirs = write_file_groups(testdir, filesize)
         this = mkparams(zip(seq2dicts('filesize', filesize),
-                            seq2dicts('filesize_dr', filesize_dr),
+                            seq2dicts('group_dirs', group_dirs),
                             seq2dicts('filesize_str', list(map(size2str,
                                                                filesize))),
-                            seq2dicts('files_dirs', [[x] for x in filesize_dr])),
+                            seq2dicts('files_dirs', [[x] for x in group_dirs])),
                         seq2dicts('study', [study]),
                         seq2dicts('ncores', [1]),
                         zip(seq2dicts('blocksize', blocksize),
                             seq2dicts('blocksize_str', list(map(size2str,
                                                                 blocksize)))))
         params += this
-
-##    params = params_filter(params)
-
-    # collection of different file sizes
-    filesize = bytes_linspace(128*KiB, collection_size, 5)
-    blocksize = [512*KiB]
-    testdir = mkdtemp(dir=tmpdir)
-    filesize_dr = write(testdir, filesize, collection_size)
+    
+    # collection of different file sizes (a.k.a. "realistic" synthetic data),
+    # test blocksize, use the whole "testdir" as argument for findsame 
+    collection_size = scale*GiB
+    nfiles = 30
+    study = 'blocksize_all'
+    filesize = bytes_linspace(128*KiB, collection_size/nfiles, nfiles)
+    blocksize = bytes_logspace(10*KiB, scale*100*MiB, 10)
+    testdir = mkdtemp(dir=tmpdir, prefix=study)
+    write_file_groups(testdir, filesize,
+                      collection_size/nfiles)
 
     this = mkparams(seq2dicts('files_dirs', [[testdir]]),
-                    seq2dicts('study', ['all_sizes']),
+                    seq2dicts('study', [study]),
+                    seq2dicts('ncores', [1]),
+                    zip(seq2dicts('blocksize', blocksize),
+                        seq2dicts('blocksize_str', list(map(size2str,
+                                                            blocksize)))))
+    params += this
+
+    # same collection as above, test ncores, using the "best" blocksize
+    blocksize = [256*KiB]
+    study = 'ncores'
+    # re-use files from above
+    this = mkparams(seq2dicts('files_dirs', [[testdir]]),
+                    seq2dicts('study', [study]),
                     seq2dicts('ncores', [1,2,4]),
                     zip(seq2dicts('blocksize', blocksize),
                         seq2dicts('blocksize_str', list(map(size2str,
@@ -338,8 +355,9 @@ if __name__ == '__main__':
         df = main(tmpdir)
         df.to_json(results)
 
-    plot('blocksize', df, 'blocksize', 'timing', 'filesize_str', plot='semilogx')
-    plot('filesize', df, 'filesize', 'timing', 'blocksize_str')
-    plot('all_sizes', df, 'ncores', 'timing', 'blocksize_str')
+##    plot('blocksize_single', df, 'blocksize', 'timing', 'filesize_str', plot='semilogx')
+    plot('filesize_single', df, 'filesize', 'timing', 'blocksize_str')
+    plot('blocksize_all', df, 'blocksize', 'timing', plot='semilogx')
+    plot('ncores', df, 'ncores', 'timing', 'blocksize_str')
 
     plt.show()
