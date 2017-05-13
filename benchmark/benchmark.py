@@ -244,13 +244,18 @@ def params_filter(params):
     return [p for p in params if p['blocksize'] <= p['filesize']]
 
 
-def plot(study, df, xprop, yprop, cprop, plot='plot'):
+def plot(study, df, xprop, yprop, cprop=None, plot='plot'):
     fig,ax = plt.subplots()
     df = df[df['study'] == study]
     df = df.sort_values(xprop)
     xticks = []
     xticklabels = []
-    for const in np.sort(df[cprop].unique()):
+    if cprop is None:
+        cprop = 'study'
+        const_itr = [study]
+    else:
+        const_itr = np.sort(df[cprop].unique())
+    for const in const_itr:
         msk = df[cprop] == const
         label = df[msk][cprop].values[0]
         x = df[msk][xprop]
