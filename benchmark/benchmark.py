@@ -106,15 +106,8 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 
+from findsame.common import KiB, MiB, GiB, size2str
 pj = os.path.join
-
-#------------------------------------------------------------------------------
-# constants
-#------------------------------------------------------------------------------
-
-KiB = 1024
-MiB = KiB**2
-GiB = KiB**3
 
 
 #------------------------------------------------------------------------------
@@ -188,16 +181,6 @@ def run(df, func, params):
 # helpers for this study
 #------------------------------------------------------------------------------
 
-def size2str(filesize, sep=''):
-    """Convert size in bytes to string with unit."""
-    div = [(GiB, 'G'), (MiB, 'M'), (KiB, 'K'), (1, 'B')]
-    for divsize, symbol in div:
-        if filesize // divsize == 0:
-            continue
-        else:
-            return "{:.1f}{}{}".format(filesize/divsize, sep, symbol)
-
-
 def bytes_logspace(start, stop, num):
     return np.unique(np.logspace(np.log10(start),
                                  np.log10(stop),
@@ -210,6 +193,24 @@ def bytes_linspace(start, stop, num):
                                  num).astype(int))
 
 
+def write(fn, size):
+    data = b'x'*size
+    with open(fn, 'wb') as fd:
+        fd.write(data)
+
+
+def write_single_files(testdir, sizes):
+    files = []
+    for filesize in sizes:
+        filesize_str = size2str(filesize)
+        dr = pj(testdir, 'filesize_{}'.format(filesize_str))
+        os.makedirs(dr, exist_ok=True)
+        fn = pj(dr, 'file')
+        write(fn, filesize)
+        files.append(fn)
+    return files
+
+
 def write_file_groups(testdir, sizes, group_size=None):
     if group_size is None:
         group_size = max(sizes)
@@ -217,19 +218,17 @@ def write_file_groups(testdir, sizes, group_size=None):
         assert group_size >= max(sizes)
     print("writing file groups, group_size: {}".format(size2str(group_size)))
     group_dirs = []
-    for filesize in sizes:
+    for _filesize in sizes:
+        filesize = int(_filesize)
         filesize_str = size2str(filesize)
         print("  filesize: {}".format(filesize_str))
         dr = pj(testdir, 'filesize_{}'.format(filesize_str))
         group_dirs.append(dr)
         if not os.path.exists(dr):
             os.makedirs(dr, exist_ok=True)
-            nfiles = int(group_size) // int(filesize)
-            data = b'x'*filesize
+            nfiles = int(group_size) // filesize
             for idx in range(nfiles):
-                fn = pj(dr, 'file_{}'.format(idx))
-                with open(fn, 'wb') as fd:
-                    fd.write(data)
+                write(pj(dr, 'file_{}'.format(idx)), filesize)
         else:
             print('    dir already present: {}'.format(dr))
     return group_dirs
@@ -249,15 +248,15 @@ def params_filter(params):
 
 def plot(study, df, xprop, yprop, cprop=None, plot='plot'):
     fig,ax = plt.subplots()
-    df = df[df['study'] == study]
-    df = df.sort_values(xprop)
     xticks = []
     xticklabels = []
+    df = df.sort_values(xprop)
+    df = df[df['study'] == study]
     if cprop is None:
         cprop = 'study'
         const_itr = [study]
     else:
-        const_itr = np.sort(df[cprop].unique())
+        const_itr = df[cprop].unique()
     for const in const_itr:
         msk = df[cprop] == const
         label = df[msk][cprop].values[0]
@@ -274,6 +273,7 @@ def plot(study, df, xprop, yprop, cprop=None, plot='plot'):
     ax.set_xticklabels(xticklabels, rotation=45)
     ax.set_xlabel(xprop)
     ax.set_ylabel(yprop)
+    ax.set_title(study)
     fig.subplots_adjust(bottom=0.2)
     ax.legend(title=cprop.replace('_str',''))
 
@@ -286,23 +286,26 @@ def main(tmpdir):
 
     df = pd.DataFrame()
     params = []
-    scale = 0.1
+    scale = 1
     
-    cases = [##(bytes_linspace(128*KiB, scale*100*MiB, 3),
-             ## bytes_logspace(10*KiB, scale*100*MiB, 10),
-             ## 'blocksize_single'),
-             (bytes_linspace(128*KiB, scale*100*MiB, 30),
-              [64*KiB, 256*KiB],
-              'filesize_single')]
+    # single files, test filesize and blocksize
+    cases = [(bytes_linspace(10*MiB, 100*MiB, 4),
+              bytes_logspace(10*KiB, 100*MiB, 10),
+              'blocksize_single'),
+             (bytes_linspace(10*KiB, 100*MiB, 10),
+              bytes_logspace(10*MiB, 100*MiB, 4),
+              'filesize_single'),
+              ]
 
-    for filesize, blocksize, study in cases:
+    for _filesize, _blocksize, study in cases:
+        filesize = (_filesize * scale).astype(int)
+        blocksize = (_blocksize * scale).astype(int)
         testdir = mkdtemp(dir=tmpdir, prefix=study)
-        group_dirs = write_file_groups(testdir, filesize)
+        files = write_single_files(testdir, filesize)
         this = mkparams(zip(seq2dicts('filesize', filesize),
-                            seq2dicts('group_dirs', group_dirs),
                             seq2dicts('filesize_str', list(map(size2str,
                                                                filesize))),
-                            seq2dicts('files_dirs', [[x] for x in group_dirs])),
+                            seq2dicts('files_dirs', [[x] for x in files])),
                         seq2dicts('study', [study]),
                         seq2dicts('ncores', [1]),
                         zip(seq2dicts('blocksize', blocksize),
@@ -310,16 +313,17 @@ def main(tmpdir):
                                                                 blocksize)))))
         params += this
     
+    
     # collection of different file sizes (a.k.a. "realistic" synthetic data),
     # test blocksize, use the whole "testdir" as argument for findsame 
-    collection_size = scale*GiB
-    nfiles = 30
-    study = 'blocksize_all'
-    filesize = bytes_linspace(128*KiB, collection_size/nfiles, nfiles)
-    blocksize = bytes_logspace(10*KiB, scale*100*MiB, 10)
+    collection_size = GiB
+    ngroups = 30
+    study = 'blocksize_collection'
+    filesize = bytes_linspace(scale*128*KiB, scale*collection_size/ngroups, ngroups)
+    blocksize = bytes_logspace(scale*10*KiB, scale*100*MiB, 10)
     testdir = mkdtemp(dir=tmpdir, prefix=study)
     write_file_groups(testdir, filesize,
-                      collection_size/nfiles)
+                      int(collection_size/ngroups*scale))
 
     this = mkparams(seq2dicts('files_dirs', [[testdir]]),
                     seq2dicts('study', [study]),
@@ -355,9 +359,9 @@ if __name__ == '__main__':
         df = main(tmpdir)
         df.to_json(results)
 
-##    plot('blocksize_single', df, 'blocksize', 'timing', 'filesize_str', plot='semilogx')
+    plot('blocksize_single', df, 'blocksize', 'timing', 'filesize_str', plot='semilogx')
     plot('filesize_single', df, 'filesize', 'timing', 'blocksize_str')
-    plot('blocksize_all', df, 'blocksize', 'timing', plot='semilogx')
+    plot('blocksize_collection', df, 'blocksize', 'timing', plot='semilogx')
     plot('ncores', df, 'ncores', 'timing', 'blocksize_str')
 
     plt.show()

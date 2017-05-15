@@ -11,23 +11,23 @@ usage
 
 ::
 
-    $ ./findsame.py -h
-    usage: findsame.py [-h] [-v] [-n NCORES] [-b BLOCKSIZE]
-                       file/dir [file/dir ...]
+	$ ./fs.py -h
+	usage: fs.py [-h] [-v] [-n NCORES] [-b BLOCKSIZE] file/dir [file/dir ...]
 
-    Find same files and dirs based on file hashes.
+	Find same files and dirs based on file hashes.
 
-    positional arguments:
-      file/dir              files and/or dirs to compare
+	positional arguments:
+	  file/dir              files and/or dirs to compare
 
-    optional arguments:
-      -h, --help            show this help message and exit
-      -v, --verbose         verbose
-      -n NCORES, --ncores NCORES
-                            number of processes for parallel hash calc in Merkle
-                            tree
-      -b BLOCKSIZE, --blocksize BLOCKSIZE
-                            read-in blocksize (byte) in hash calculation [1048576]
+	optional arguments:
+	  -h, --help            show this help message and exit
+	  -v, --verbose         verbose
+	  -n NCORES, --ncores NCORES
+							number of processes for parallel hash calc in Merkle
+							tree
+	  -b BLOCKSIZE, --blocksize BLOCKSIZE
+							read-in blocksize in hash calculation, use units K,M,G
+							as in 100M, 218K or just 1024 (bytes) [256.0K]
 
 The output format is json::
 
@@ -47,7 +47,7 @@ The output format is json::
 Use `jq <https://stedolan.github.io/jq>`_ for pretty-printing. Example using
 the test suite data::
 
-	$ ./findsame.py test/data | jq .
+	$ ./fs.py test/data | jq .
 	{
 	  "0a96c2e755258bd46abdde729f8ee97d234dd04e": {
 		"file": [
@@ -96,14 +96,14 @@ the test suite data::
 
 
 Note that the order of key-value entries in the output from both
-``findsame.py`` and ``jq`` is random.
+``fs.py`` and ``jq`` is random.
 
 Post-processing is only limited by your ability to process json (using ``jq``,
 Python, ...).
 
 A common task is to find only groups of equal dirs::
 
-	$ ./findsame.py test/data | jq '.[]|select(.dir)|.dir'
+	$ ./fs.py test/data | jq '.[]|select(.dir)|.dir'
 	[
 	  "test/data/dir1",
 	  "test/data/dir1_copy"
@@ -111,7 +111,7 @@ A common task is to find only groups of equal dirs::
 
 Or only the files::
 
-	$ ./findsame.py test/data | jq '.[]|select(.file)|.file'
+	$ ./fs.py test/data | jq '.[]|select(.file)|.file'
 	[
 	  "test/data/dir1/file2",
 	  "test/data/dir1/file2_copy",
@@ -133,7 +133,7 @@ same-hash files/dirs.
 
 Find first element::
 
-	$ ./findsame.py test/data | jq '.[]|.[]|[.[0]]'
+	$ ./fs.py test/data | jq '.[]|.[]|[.[0]]'
 	[
 	  "test/data/lena.png"
 	]
@@ -155,7 +155,7 @@ Find first element::
 
 or w/o the length-1 list::
 
-	$ ./findsame.py test/data | jq '.[]|.[]|.[0]'
+	$ ./fs.py test/data | jq '.[]|.[]|.[0]'
 	"test/data/dir2/empty_dir"
 	"test/data/dir2/empty_dir/empty_file"
 	"test/data/dir1/file2"
@@ -166,7 +166,7 @@ or w/o the length-1 list::
 
 All but first::
 
-	$ ./findsame.py test/data | jq '.[]|.[]|.[1:]'
+	$ ./fs.py test/data | jq '.[]|.[]|.[1:]'
 	[
 	  "test/data/dir1_copy"
 	]
