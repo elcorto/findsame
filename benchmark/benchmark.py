@@ -17,12 +17,11 @@ Below we have some helper functions which assist in creating `params`.
 Basically, we define the to-be-varied parameters as "named sequences" (i.e.
 list of dicts) and use itertools.product to loop over them.
 
-    >>> from findsame.benchmark import benchmark as bm
     >>> import itertools
-    >>> x=bm.seq2dicts('a', [1,2,3])
+    >>> x=seq2dicts('a', [1,2,3])
     >>> x
     [{'x': 1}, {'x': 2}, {'x': 3}]
-    >>> y=bm.seq2dicts('y', ['xx','yy','zz'])
+    >>> y=seq2dicts('y', ['xx','yy','zz'])
     >>> y
     [{'y': 'xx'}, {'y': 'yy'}, {'y': 'zz'}]
     >>> list(itertools.product(x,y))
@@ -36,7 +35,7 @@ list of dicts) and use itertools.product to loop over them.
      ({'x': 3}, {'y': 'yy'}),
      ({'x': 3}, {'y': 'zz'})]
 
-    >>> bm.loops2params(itertools.product(x,y))
+    >>> loops2params(itertools.product(x,y))
     [{'x': 1, 'y': 'xx'},
      {'x': 1, 'y': 'yy'},
      {'x': 1, 'y': 'zz'},
@@ -51,7 +50,7 @@ The logic of the param study is entirely contained in the creation of `params`.
 E.g., if parameters shall be varied together, simply use ``mkparams(zip(x,y),
 z)``. The nestings from zip() are flattened in loops2params().
 
-    >>> z=bm.seq2dicts('z', [None, 1.2, 'X'])
+    >>> z=seq2dicts('z', [None, 1.2, 'X'])
     >>> z
     [{'z': None}, {'z': 1.2}, {'z': 'X'}]
     >>> list(itertools.product(zip(x,y),z))
@@ -65,7 +64,7 @@ z)``. The nestings from zip() are flattened in loops2params().
      (({'x': 3}, {'y': 'zz'}), {'z': 1.2}),
      (({'x': 3}, {'y': 'zz'}), {'z': 'X'})]
 
-    >>> bm.loops2params(itertools.product(zip(x,y),z))
+    >>> loops2params(itertools.product(zip(x,y),z))
     [{'x': 1, 'y': 'xx', 'z': None},
      {'x': 1, 'y': 'xx', 'z': 1.2},
      {'x': 1, 'y': 'xx', 'z': 'X'},
@@ -79,8 +78,8 @@ z)``. The nestings from zip() are flattened in loops2params().
 If you want a parameter which is constant, use a length one list and put it in
 the loops:
 
-    >>> c=bm.seq2dicts('c', ['const'])
-    >>> bm.loops2params(itertools.product(zip(x,y),z,c))
+    >>> c=seq2dicts('c', ['const'])
+    >>> loops2params(itertools.product(zip(x,y),z,c))
     [{'a': 1, 'c': 'const', 'y': 'xx', 'z': None},
      {'a': 1, 'c': 'const', 'y': 'xx', 'z': 1.2},
      {'a': 1, 'c': 'const', 'y': 'xx', 'z': 'X'},
@@ -106,7 +105,7 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 
-from findsame.common import KiB, MiB, GiB, size2str
+from findsame.lib.common import KiB, MiB, GiB, size2str
 pj = os.path.join
 
 
@@ -281,25 +280,22 @@ def plot(study, df, xprop, yprop, cprop=None, plot='plot'):
 def main(tmpdir):
     os.makedirs(tmpdir, exist_ok=True)
 
-    setup = "from findsame import findsame as fs"
-    stmt = "fs.main({files_dirs}, ncores={ncores}, blocksize={blocksize})"
+    setup = "from findsame import find"
+    stmt = "find.main({files_dirs}, ncores={ncores}, blocksize={blocksize})"
 
     df = pd.DataFrame()
     params = []
-    scale = 1
     
     # single files, test filesize and blocksize
-    cases = [(bytes_linspace(10*MiB, 100*MiB, 4),
-              bytes_logspace(10*KiB, 100*MiB, 10),
+    cases = [(np.array([500*MiB]),
+              bytes_logspace(10*KiB, 200*MiB, 20),
               'blocksize_single'),
-             (bytes_linspace(10*KiB, 100*MiB, 10),
-              bytes_logspace(10*MiB, 100*MiB, 4),
+             (bytes_linspace(10*MiB, 200*MiB, 5),
+              np.array([256*KiB]),
               'filesize_single'),
               ]
 
-    for _filesize, _blocksize, study in cases:
-        filesize = (_filesize * scale).astype(int)
-        blocksize = (_blocksize * scale).astype(int)
+    for filesize, blocksize, study in cases:
         testdir = mkdtemp(dir=tmpdir, prefix=study)
         files = write_single_files(testdir, filesize)
         this = mkparams(zip(seq2dicts('filesize', filesize),
@@ -317,13 +313,14 @@ def main(tmpdir):
     # collection of different file sizes (a.k.a. "realistic" synthetic data),
     # test blocksize, use the whole "testdir" as argument for findsame 
     collection_size = GiB
-    ngroups = 30
+    ngroups = 10 
     study = 'blocksize_collection'
-    filesize = bytes_linspace(scale*128*KiB, scale*collection_size/ngroups, ngroups)
-    blocksize = bytes_logspace(scale*10*KiB, scale*100*MiB, 10)
+    filesize = bytes_logspace(128*KiB, collection_size/ngroups,
+                              ngroups)
+    blocksize = bytes_logspace(10*KiB, 200*MiB, 20)
     testdir = mkdtemp(dir=tmpdir, prefix=study)
     write_file_groups(testdir, filesize,
-                      int(collection_size/ngroups*scale))
+                      int(collection_size/ngroups))
 
     this = mkparams(seq2dicts('files_dirs', [[testdir]]),
                     seq2dicts('study', [study]),
@@ -334,7 +331,7 @@ def main(tmpdir):
     params += this
 
     # same collection as above, test ncores, using the "best" blocksize
-    blocksize = [256*KiB]
+    blocksize = np.array([256*KiB])
     study = 'ncores'
     # re-use files from above
     this = mkparams(seq2dicts('files_dirs', [[testdir]]),
