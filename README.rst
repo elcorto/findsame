@@ -208,19 +208,17 @@ for hash calculations::
     $ cd benchmark
     $ rm -rf files results.json; ./benchmark.py
 
-This writes test files of various size to ``benchmark/files``. Tune
-``scale`` in ``benchmark.main()`` for more and bigger test files.
+This writes test files of various size to ``benchmark/files`` and runs a coulpe
+of benchmarks (runs < 5 min).
 
 Bottom line (test system: Lenovo E330, Samsung 840 Evo SSD, Core i3-3120M)
 
-* blocksizes around 256 kiB (``--blocksize 262144``) work best for all file
+* blocksizes around 256 KiB (``--blocksize 256K``) work best for all file
   sizes, even though the variation to worst timings is at most factor 1.25
   (e.g. 1 vs. 1.25 seconds)
 * using multiple cores actually slows things down since the hashing seems to be
   IO-bound (reading is slower than hashing blocks)
-* there is a strong (up to factor 2) and non-monotonic dependence on file size,
-  may be related to disk cache size (runtime keeps increasing until certain
-  characteristic file sizes and then drops) .. not fully investigated yet
+* we have a linear increase of runtime with filesize, of course
 
 other tools
 -----------
