@@ -96,7 +96,6 @@ Then we define a callback function `func`, which takes only one parameter dict
 DataFrame. `func` is called on all `params` in the `run` helper function.
 """
 
-from io import IOBase
 from itertools import product
 import timeit, os, copy
 from tempfile import mkdtemp
@@ -105,51 +104,14 @@ import pandas as pd
 import numpy as np
 from matplotlib import pyplot as plt
 
-from findsame.lib.common import KiB, MiB, GiB, size2str
+from findsame.lib.common import KiB, MiB, GiB, size2str, seq2dicts
+import findsame.lib.common as co 
 pj = os.path.join
 
 
 #------------------------------------------------------------------------------
 # general helpers
 #------------------------------------------------------------------------------
-
-def seq2dicts(name, seq):
-    """
-    >>> seq2dicts('a', [1,2,3])
-    [{'a': 1}, {'a': 2}, {'a': 3}]
-    """
-    return [{name: entry} for entry in seq]
-
-
-# stolen from pwtools and adapted for python3
-def is_seq(seq):
-    if isinstance(seq, str) or \
-       isinstance(seq, IOBase) or \
-       isinstance(seq, dict):
-        return False
-    else:
-        try:
-            _ = iter(seq)
-            return True
-        except:
-            return False
-
-
-def flatten(seq):
-    for item in seq:
-        if not is_seq(item):
-            yield item
-        else:
-            for subitem in flatten(item):
-                yield subitem
-
-
-def merge_dicts(lst):
-    dct = {}
-    for entry in lst:
-        dct.update(entry)
-    return dct
-
 
 def params2df(params):
     df = pd.DataFrame()
@@ -163,7 +125,7 @@ def mkparams(*args):
 
 
 def loops2params(loops):
-    return [merge_dicts(flatten(entry)) for entry in loops]
+    return [co.merge_dicts(co.flatten(entry)) for entry in loops]
 
 
 def run(df, func, params):
@@ -280,8 +242,8 @@ def plot(study, df, xprop, yprop, cprop=None, plot='plot'):
 def main(tmpdir):
     os.makedirs(tmpdir, exist_ok=True)
 
-    setup = "from findsame import find"
-    stmt = "find.main({files_dirs}, ncores={ncores}, blocksize={blocksize})"
+    setup = "from findsame import fs"
+    stmt = "fs.main({files_dirs}, ncores={ncores}, blocksize={blocksize})"
 
     df = pd.DataFrame()
     params = []
