@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """
 Simplified benchmark of the bottleneck: findsame.lib.calc.hash_file(). How do
