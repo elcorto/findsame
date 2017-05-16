@@ -229,14 +229,19 @@ def plot(study, df, xprop, yprop, cprop=None, plot='plot'):
             xprop_str = xprop + '_str'
             sel = xprop_str if xprop_str in df[msk].columns else xprop
             xticklabels = df[msk][sel]
-
+    
+    ylabel = 'timing (s)' if yprop == 'timing' else yprop
+    rotation = 45 if xprop.endswith('size') else None
     ax.set_xticks(xticks)
-    ax.set_xticklabels(xticklabels, rotation=45)
+    ax.set_xticklabels(xticklabels, rotation=rotation)
     ax.set_xlabel(xprop)
-    ax.set_ylabel(yprop)
+    ax.set_ylabel(ylabel)
     ax.set_title(study)
     fig.subplots_adjust(bottom=0.2)
     ax.legend(title=cprop.replace('_str',''))
+    os.makedirs('pics', exist_ok=True)
+    for ext in ['pdf', 'png']:
+        fig.savefig("pics/{study}.{ext}".format(study=study, ext=ext), dpi=300)
 
 
 def main(tmpdir):
@@ -302,7 +307,7 @@ def main(tmpdir):
     this = mkparams(seq2dicts('files_dirs', [[testdir]]),
                     zip(seq2dicts('study', parallel),
                         seq2dicts('parallel', parallel)),
-                    seq2dicts('nworkers', [1,2,4]),
+                    seq2dicts('nworkers', [1,2,3,4]),
                     zip(seq2dicts('blocksize', blocksize),
                         seq2dicts('blocksize_str', list(map(size2str,
                                                             blocksize)))))
