@@ -1,7 +1,6 @@
 import subprocess, os, json, random
 from findsame.lib import calc
 from findsame.lib import common as co
-from numpy import sort
 pj = os.path.join
 
 
