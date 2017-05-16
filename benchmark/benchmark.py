@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
 """
 basic data struct for param study:
@@ -102,7 +102,12 @@ from tempfile import mkdtemp
 
 import pandas as pd
 import numpy as np
-from matplotlib import pyplot as plt
+
+try:
+    from matplotlib import pyplot as plt
+    HAVE_MPL = True
+except ImportError:
+    HAVE_MPL = False
 
 from findsame.lib.common import KiB, MiB, GiB, size2str, seq2dicts
 import findsame.lib.common as co 
@@ -326,11 +331,11 @@ if __name__ == '__main__':
         print("running benchmark")
         df = main(tmpdir)
         df.to_json(results)
-
-    plot('blocksize_single', df, 'blocksize', 'timing', 'filesize_str', plot='semilogx')
-    plot('filesize_single', df, 'filesize', 'timing', 'blocksize_str')
-    plot('blocksize_collection', df, 'blocksize', 'timing', plot='semilogx')
-    plot('threads', df, 'nworkers', 'timing', 'blocksize_str')
-    plot('procs', df, 'nworkers', 'timing', 'blocksize_str')
-
-    plt.show()
+    
+    if HAVE_MPL:
+        plot('blocksize_single', df, 'blocksize', 'timing', 'filesize_str', plot='semilogx')
+        plot('filesize_single', df, 'filesize', 'timing', 'blocksize_str')
+        plot('blocksize_collection', df, 'blocksize', 'timing', plot='semilogx')
+        plot('threads', df, 'nworkers', 'timing', 'blocksize_str')
+        plot('procs', df, 'nworkers', 'timing', 'blocksize_str')
+        plt.show()
