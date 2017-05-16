@@ -243,7 +243,8 @@ def main(tmpdir):
     os.makedirs(tmpdir, exist_ok=True)
 
     setup = "from findsame import fs"
-    stmt = "fs.main({files_dirs}, ncores={ncores}, blocksize={blocksize})"
+    stmt = """fs.main({files_dirs}, nworkers={nworkers}, parallel='{parallel}',
+                      blocksize={blocksize})"""
 
     df = pd.DataFrame()
     params = []
@@ -265,7 +266,8 @@ def main(tmpdir):
                                                                filesize))),
                             seq2dicts('files_dirs', [[x] for x in files])),
                         seq2dicts('study', [study]),
-                        seq2dicts('ncores', [1]),
+                        seq2dicts('nworkers', [1]),
+                        seq2dicts('parallel', ['threads']),
                         zip(seq2dicts('blocksize', blocksize),
                             seq2dicts('blocksize_str', list(map(size2str,
                                                                 blocksize)))))
@@ -286,19 +288,21 @@ def main(tmpdir):
 
     this = mkparams(seq2dicts('files_dirs', [[testdir]]),
                     seq2dicts('study', [study]),
-                    seq2dicts('ncores', [1]),
+                    seq2dicts('nworkers', [1]),
+                    seq2dicts('parallel', ['threads']),
                     zip(seq2dicts('blocksize', blocksize),
                         seq2dicts('blocksize_str', list(map(size2str,
                                                             blocksize)))))
     params += this
 
-    # same collection as above, test ncores, using the "best" blocksize
+    # same collection as above, test nworkers, using the "best" blocksize
     blocksize = np.array([256*KiB])
-    study = 'ncores'
+    parallel = ['threads', 'procs']
     # re-use files from above
     this = mkparams(seq2dicts('files_dirs', [[testdir]]),
-                    seq2dicts('study', [study]),
-                    seq2dicts('ncores', [1,2,4]),
+                    zip(seq2dicts('study', parallel),
+                        seq2dicts('parallel', parallel)),
+                    seq2dicts('nworkers', [1,2,4]),
                     zip(seq2dicts('blocksize', blocksize),
                         seq2dicts('blocksize_str', list(map(size2str,
                                                             blocksize)))))
@@ -321,6 +325,7 @@ if __name__ == '__main__':
     plot('blocksize_single', df, 'blocksize', 'timing', 'filesize_str', plot='semilogx')
     plot('filesize_single', df, 'filesize', 'timing', 'blocksize_str')
     plot('blocksize_collection', df, 'blocksize', 'timing', plot='semilogx')
-    plot('ncores', df, 'ncores', 'timing', 'blocksize_str')
+    plot('threads', df, 'nworkers', 'timing', 'blocksize_str')
+    plot('procs', df, 'nworkers', 'timing', 'blocksize_str')
 
     plt.show()

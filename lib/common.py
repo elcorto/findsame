@@ -13,23 +13,23 @@ def size2str(filesize, sep='', prec=1):
         if filesize // unit == 0:
             continue
         else:
-            fmt = "{{:.{prec}f}}{{}}{{}}".format(prec=prec)
+            fmt = "{:.%df}{}{}" %prec
             return fmt.format(filesize/unit, sep, symbol)
 
 
 def str2size(st, sep=''):
     if st[-1] in INV_UNITS.keys():
         if sep == '':
-            unit = st[-1]
             number = st[:-1]
+            unit = st[-1]
         else:
             split = st.split(sep)
             assert len(split) == 2
-            unit = split[1]
             number = split[0]
+            unit = split[1]
     else:
-        unit = ''
         number = st
+        unit = ''
     return int(float(number) * INV_UNITS[unit])
 
 

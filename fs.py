@@ -4,7 +4,7 @@ import functools, argparse, json, os
 from findsame.lib import common as co
 from findsame.lib import calc
 
-def main(files_dirs, ncores=None, blocksize=None):
+def main(files_dirs, nworkers=None, parallel=None, blocksize=None):
     file_hashes = dict()
     dir_hashes = dict()
     for path in files_dirs:
@@ -12,8 +12,8 @@ def main(files_dirs, ncores=None, blocksize=None):
         if os.path.isfile(path):
             file_hashes[path] = calc.hash_file(path, blocksize)
         elif os.path.isdir(path):
-            tree = calc.MerkleTree(path, calc=True, ncores=ncores,
-                                   blocksize=blocksize)
+            tree = calc.MerkleTree(path, calc=True, nworkers=nworkers,
+                                   parallel=parallel, blocksize=blocksize)
             file_hashes.update(tree.file_hashes)
             dir_hashes.update(tree.dir_hashes)
         else:
@@ -66,9 +66,9 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--verbose', action='store_true',
                         default=False,
                         help='verbose')
-    parser.add_argument('-n', '--ncores', type=int,
+    parser.add_argument('-n', '--nworkers', type=int,
                         default=None,
-                        help='number of processes for parallel hash calc '
+                        help='number of worker threads for parallel hash calc '
                              'in Merkle tree')
     parser.add_argument('-b', '--blocksize', 
                         default=co.size2str(calc.BLOCKSIZE),
@@ -78,6 +78,7 @@ if __name__ == '__main__':
                              '[%(default)s]')
     args = parser.parse_args()
     VERBOSE = args.verbose 
-    print(json.dumps(main(args.files_dirs, 
-                          args.ncores,
-                          co.str2size(args.blocksize))))
+    print(json.dumps(main(files_dirs=args.files_dirs, 
+                          nworkers=args.nworkers,
+                          parallel='threads',
+                          blocksize=co.str2size(args.blocksize))))

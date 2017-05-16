@@ -19,7 +19,8 @@ python3
 """
 
 import os, hashlib, sys
-from multiprocessing import Pool
+##from multiprocessing import Pool # same as ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from findsame.lib import common as co
 
 VERBOSE = False
@@ -153,10 +154,18 @@ class Leaf(Element):
 
 
 class MerkleTree:
-    def __init__(self, dr, calc=True, ncores=None, blocksize=BLOCKSIZE):
-        self.ncores = ncores
+    def __init__(self, dr, calc=True, nworkers=None, parallel='threads',
+                 blocksize=BLOCKSIZE):
+        self.nworkers = nworkers
         self.blocksize = blocksize
         self.dr = dr
+        pool_class_map = {'threads': ThreadPoolExecutor,
+                          'procs': ProcessPoolExecutor}
+        self.pool_class = pool_class_map.get(parallel, None)
+        if self.pool_class is None:
+            raise Exception("parallel must be one "
+                            "of {}, was: {}".format(pool_class_map.keys(),
+                                                    parallel))
         assert os.path.exists(self.dr) and os.path.isdir(self.dr)
         self.build_tree()
         if calc:
@@ -211,8 +220,8 @@ class MerkleTree:
         # leafs can be calculated in parallel since there are no dependencies,
         # but the whole operation is about 50% IO-bound, speedup is moderate or
         # even < 1
-        if (self.ncores is not None) and (self.ncores > 1):
-            with Pool(self.ncores) as pool:
+        if (self.nworkers is not None) and (self.nworkers > 1):
+            with self.pool_class(self.nworkers) as pool:
                 self.file_hashes = dict(pool.map(self._worker, self.leafs.items()))
         else:
             self.file_hashes = dict((k,v.hash) for k,v in self.leafs.items())
