@@ -1,4 +1,4 @@
-import subprocess, os, json, random
+import subprocess, os, json, random, sys
 from findsame.lib import calc
 from findsame.lib import common as co
 pj = os.path.join
@@ -9,7 +9,13 @@ pj = os.path.join
 #-------------------------------------------------------------------------------
 
 def hash_file_subprocess(fn):
-    return subprocess.getoutput(r"sha1sum {} | cut -d ' ' -f1".format(fn))
+    if sys.platform == 'linux':
+        cmd = r"sha1sum {} | cut -d ' ' -f1"
+    else:
+        # assume BSD-ish system, don't test for
+        # sys.platform='freebsd10' or 'darwin' expicitly
+        cmd = r"sha1 {} | cut -d= -f2 | tr -d ' '"
+    return subprocess.getoutput(cmd.format(fn))
 
 
 #-------------------------------------------------------------------------------
