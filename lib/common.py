@@ -1,4 +1,3 @@
-from io import IOBase
 
 KiB = 1024
 MiB = KiB**2
@@ -77,45 +76,6 @@ def dict_equal(aa, bb):
                 print("vals not equal:\naa: {}\nbb: {}".format(xx, yy))
                 return False
     return True
-
-
-def merge_dicts(lst):
-    dct = {}
-    for entry in lst:
-        dct.update(entry)
-    return dct
-
-
-def seq2dicts(name, seq):
-    """
-    >>> seq2dicts('a', [1,2,3])
-    [{'a': 1}, {'a': 2}, {'a': 3}]
-    """
-    return [{name: entry} for entry in seq]
-
-
-# stolen from pwtools and adapted for python3
-def is_seq(seq):
-    if isinstance(seq, str) or \
-       isinstance(seq, IOBase) or \
-       isinstance(seq, dict):
-        return False
-    else:
-        try:
-            _ = iter(seq)
-            return True
-        except:
-            return False
-
-
-def flatten(seq):
-    for item in seq:
-        if not is_seq(item):
-            yield item
-        else:
-            for subitem in flatten(item):
-                yield subitem
-
 
 
 class lazyprop(object):
