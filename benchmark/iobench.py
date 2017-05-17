@@ -40,11 +40,10 @@ benchmark.py).
 
 On the other hand, it is "well known" that one can fight I/O-bound problems
 with threads. Indeed, we see a speedup of 1.5..1.6, which is a bit more than
-1.33. The reason for there being a speedup at all with threads is unclear to
-me. Our test system is a Core i5-3210M which has 2 threads / core. Since
+1.33. Our test system is a Core i3 or Core i5 which has 2 threads / core. Since
 threading in Python is still bound to one interpreter process by the GIL, it is
-unclear where the speedup comes from. Need to test that on a system with 1
-thread / core (i.e. no Intel Hyperthreading).
+unclear where the speedup actually comes from. The behavior is the same on a
+system with 1 thread / core (i.e. no Intel Hyperthreading).
 """
 
 import timeit

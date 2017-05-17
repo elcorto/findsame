@@ -211,14 +211,22 @@ for hash calculations::
 This writes test files of various size to ``benchmark/files`` and runs a coulpe
 of benchmarks (runs < 5 min).
 
-Bottom line (test system: Lenovo E330, Samsung 840 Evo SSD, Core i3-3120M)
+Bottom line:
 
 * blocksizes around 256 KiB (``--blocksize 256K``) work best for all file
   sizes, even though the variation to worst timings is at most factor 1.25
   (e.g. 1 vs. 1.25 seconds)
-* using multiple cores actually slows things down since the hashing seems to be
-  IO-bound (reading is slower than hashing blocks)
+* using multiple worker threads helps, up to 2x speedup, multiprocessing shows
+  slowdown instead
 * we have a linear increase of runtime with filesize, of course
+
+Tested systems:
+
+* Lenovo E330, Samsung 840 Evo SSD, Core i3-3120M (2 cores, 2 threads / core)
+* Lenovo X230, Samsung 840 Evo SSD, Core i5-3210M (2 cores, 2 threads / core)
+* FreeBSD NAS, ZFS mirror, Intel Celeron J3160 (4 cores, 1 thread / core)
+
+
 
 other tools
 -----------

@@ -168,8 +168,7 @@ def write(fn, size):
 def write_single_files(testdir, sizes):
     files = []
     for filesize in sizes:
-        filesize_str = size2str(filesize)
-        dr = pj(testdir, 'filesize_{}'.format(filesize_str))
+        dr = pj(testdir, 'filesize_{}'.format(size2str(filesize)))
         os.makedirs(dr, exist_ok=True)
         fn = pj(dr, 'file')
         write(fn, filesize)
