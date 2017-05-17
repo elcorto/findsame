@@ -63,9 +63,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=desc)
     parser.add_argument('files_dirs', nargs='+', metavar='file/dir',
                         help='files and/or dirs to compare', default=[])
-    parser.add_argument('-v', '--verbose', action='store_true',
-                        default=False,
-                        help='verbose')
     parser.add_argument('-n', '--nworkers', type=int,
                         default=None,
                         help='number of worker threads for parallel hash calc '
@@ -77,7 +74,6 @@ if __name__ == '__main__':
                              '1024 (bytes) '
                              '[%(default)s]')
     args = parser.parse_args()
-    VERBOSE = args.verbose 
     print(json.dumps(main(files_dirs=args.files_dirs, 
                           nworkers=args.nworkers,
                           parallel='threads',

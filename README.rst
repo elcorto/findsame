@@ -12,7 +12,7 @@ usage
 ::
 
 	$ ./fs.py -h
-	usage: fs.py [-h] [-v] [-n NCORES] [-b BLOCKSIZE] file/dir [file/dir ...]
+	usage: fs.py [-h] [-n NCORES] [-b BLOCKSIZE] file/dir [file/dir ...]
 
 	Find same files and dirs based on file hashes.
 
@@ -21,7 +21,6 @@ usage
 
 	optional arguments:
 	  -h, --help            show this help message and exit
-	  -v, --verbose         verbose
 	  -n NCORES, --ncores NCORES
 							number of processes for parallel hash calc in Merkle
 							tree

@@ -64,7 +64,7 @@ def _preproc_json(val, ref_fn):
 
 def test_exe_stdout():
     here = os.path.dirname(__file__)
-    for opts in ['', '-v', '-n 2', '-b 512K']:
+    for opts in ['', '-n 2', '-b 512K']:
         for fmt, preproc_func in [('json', _preproc_json)]:
             exe = '{here}/../fs.py {opts} 2>/dev/null'.format(here=here, opts=opts)
             for args in ['test/data', 'test/data/*']:
