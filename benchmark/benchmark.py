@@ -97,7 +97,7 @@ DataFrame. `func` is called on all `params` in the `run` helper function.
 """
 
 from itertools import product
-import timeit, os, copy
+import timeit, os, copy, sys
 from tempfile import mkdtemp
 
 import pandas as pd
@@ -307,12 +307,15 @@ def main(tmpdir):
 
     # same collection as above, test nworkers, using the "best" blocksize
     blocksize = np.array([256*KiB])
-    parallel = ['threads', 'procs']
+    if sys.platform == 'freebsd10':
+        parallel = ['threads']
+    else:
+        parallel = ['threads', 'procs']
     # re-use files from above
     this = mkparams(seq2dicts('files_dirs', [[testdir]]),
                     zip(seq2dicts('study', parallel),
                         seq2dicts('parallel', parallel)),
-                    seq2dicts('nworkers', [1,2,3,4]),
+                    seq2dicts('nworkers', [1,2,3,4,5,6,7,8]),
                     zip(seq2dicts('blocksize', blocksize),
                         seq2dicts('blocksize_str', list(map(size2str,
                                                             blocksize)))))
