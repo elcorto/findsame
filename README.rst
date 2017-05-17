@@ -205,7 +205,8 @@ You may run the benchmark script to find the best blocksize and number of cores
 for hash calculations::
 
     $ cd benchmark
-    $ rm -rf files results.json; ./benchmark.py
+    $ rm -rf files pics results.json; ./benchmark.py
+    $ rm -rf files; ./iobench.py
 
 This writes test files of various size to ``benchmark/files`` and runs a coulpe
 of benchmarks (runs < 5 min).
