@@ -222,7 +222,9 @@ class MerkleTree:
         # even < 1
         if (self.nworkers is not None) and (self.nworkers > 1):
             with self.pool_class(self.nworkers) as pool:
-                self.file_hashes = dict(pool.map(self._worker, self.leafs.items()))
+                self.file_hashes = dict(pool.map(self._worker, 
+                                        self.leafs.items(),
+                                        chunksize=1))
         else:
             self.file_hashes = dict((k,v.hash) for k,v in self.leafs.items())
         self.dir_hashes = dict((k,v.hash) for k,v in self.nodes.items())

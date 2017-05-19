@@ -1,2 +1,5 @@
 **.pyc
 **.swp
+benchmark/files/
+benchmark/pics/
+benchmark/results.json
