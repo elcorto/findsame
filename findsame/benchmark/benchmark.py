@@ -12,7 +12,7 @@ try:
 except ImportError:
     HAVE_MPL = False
 
-from findsame.benchmark import parallel as pl 
+from findsame import parallel as pl 
 from psweep.psweep import seq2dicts, run, loops2params
 from itertools import product
 from findsame.lib.common import KiB, MiB, GiB, size2str

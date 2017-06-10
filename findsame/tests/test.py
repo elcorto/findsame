@@ -67,9 +67,9 @@ def _preproc_json(val, ref_fn):
 def test_exe_stdout():
     for opts in ['', '-n 2', '-b 512K']:
         for fmt, preproc_func in [('json', _preproc_json)]:
-            exe = '{here}/../../bin/fs.py {opts} 2>/dev/null'.format(here=here, opts=opts)
+            exe = '{here}/../../bin/fs.py {opts}'.format(here=here, opts=opts)
             for args in ['data', 'data/*']:
-                cmd = '{exe} {here}/{args}'.format(exe=exe, args=args,
+                cmd = '{exe} {here}/{args} 2>&1 | grep -v SKIP'.format(exe=exe, args=args,
                                                    here=here)
                 print(cmd)
                 out = subprocess.check_output(cmd, shell=True)
