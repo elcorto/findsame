@@ -82,10 +82,6 @@ def func(dct, stmt=None, setup=None):
     return {'timing': min(timing)}
 
 
-def params_filter(params):
-    return [p for p in params if p['blocksize'] <= p['filesize']]
-
-
 def plot(study, df, xprop, yprop, cprop=None, plot='plot'):
     df = df.sort_values(xprop)
     df = df[df['study'] == study]
@@ -133,29 +129,29 @@ def bench_main(tmpdir):
     df = pd.DataFrame()
     params = []
     
-##    # single files, test filesize and blocksize
-##    cases = [(np.array([500*MiB]),
-##              bytes_logspace(10*KiB, 200*MiB, 20),
-##              'blocksize_single'),
-##             (bytes_linspace(10*MiB, 200*MiB, 5),
-##              np.array([256*KiB]),
-##              'filesize_single'),
-##              ]
-##
-##    for filesize, blocksize, study in cases:
-##        testdir = mkdtemp(dir=tmpdir, prefix=study)
-##        files = write_single_files(testdir, filesize)
-##        this = mkparams(zip(seq2dicts('filesize', filesize),
-##                            seq2dicts('filesize_str', list(map(size2str,
-##                                                               filesize))),
-##                            seq2dicts('files_dirs', [[x] for x in files])),
-##                        seq2dicts('study', [study]),
-##                        seq2dicts('nworkers', [1]),
-##                        seq2dicts('parallel', ['threads']),
-##                        zip(seq2dicts('blocksize', blocksize),
-##                            seq2dicts('blocksize_str', list(map(size2str,
-##                                                                blocksize)))))
-##        params += this
+    # single files, test filesize and blocksize
+    cases = [(np.array([500*MiB]),
+              bytes_logspace(10*KiB, 200*MiB, 20),
+              'blocksize_single'),
+             (bytes_linspace(10*MiB, 200*MiB, 5),
+              np.array([256*KiB]),
+              'filesize_single'),
+              ]
+
+    for filesize, blocksize, study in cases:
+        testdir = mkdtemp(dir=tmpdir, prefix=study)
+        files = write_single_files(testdir, filesize)
+        this = mkparams(zip(seq2dicts('filesize', filesize),
+                            seq2dicts('filesize_str', list(map(size2str,
+                                                               filesize))),
+                            seq2dicts('files_dirs', [[x] for x in files])),
+                        seq2dicts('study', [study]),
+                        seq2dicts('nworkers', [1]),
+                        seq2dicts('parallel', ['threads']),
+                        zip(seq2dicts('blocksize', blocksize),
+                            seq2dicts('blocksize_str', list(map(size2str,
+                                                                blocksize)))))
+        params += this
     
     
     # collection of different file sizes (a.k.a. "realistic" synthetic data),
@@ -177,7 +173,7 @@ def bench_main(tmpdir):
                     zip(seq2dicts('blocksize', blocksize),
                         seq2dicts('blocksize_str', list(map(size2str,
                                                             blocksize)))))
-##    params += this
+    params += this
 
     # same collection as above, test nworkers, using the "best" blocksize
     blocksize = np.array([256*KiB])
@@ -197,9 +193,9 @@ def bench_main(tmpdir):
 
     df = run(df, lambda p: func(p, stmt, setup), params)
     if HAVE_MPL:
-##        plot('blocksize_single', df, 'blocksize', 'timing', 'filesize_str', plot='semilogx')
-##        plot('filesize_single', df, 'filesize', 'timing', 'blocksize_str')
-##        plot('blocksize_collection', df, 'blocksize', 'timing', plot='semilogx')
+        plot('blocksize_single', df, 'blocksize', 'timing', 'filesize_str', plot='semilogx')
+        plot('filesize_single', df, 'filesize', 'timing', 'blocksize_str')
+        plot('blocksize_collection', df, 'blocksize', 'timing', plot='semilogx')
         plot('threads', df, 'nworkers', 'timing', 'blocksize_str')
         plot('procs', df, 'nworkers', 'timing', 'blocksize_str')
         plt.show()
@@ -275,4 +271,4 @@ if __name__ == '__main__':
     else:
         print("running benchmark")
         bench_main(tmpdir).to_json(results)
-##        bench_parallel(tmpdir).to_json(results)
+        bench_parallel(tmpdir).to_json(results)
