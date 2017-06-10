@@ -1,8 +1,6 @@
-#!/usr/bin/env python3
-
-import functools, argparse, json, os
-from findsame.lib import common as co
-from findsame.lib import calc
+import functools, os
+from findsame import common as co
+from findsame import calc
 
 def main(files_dirs, nworkers=None, parallel=None, blocksize=None):
     file_hashes = dict()
@@ -17,7 +15,7 @@ def main(files_dirs, nworkers=None, parallel=None, blocksize=None):
             file_hashes.update(tree.file_hashes)
             dir_hashes.update(tree.dir_hashes)
         else:
-            debug_msg("SKIP: {}".format(path))
+            co.debug_msg("SKIP: {}".format(path))
 
     file_store = co.invert_dict(file_hashes)
     dir_store = co.invert_dict(dir_hashes)
@@ -56,25 +54,3 @@ def main(files_dirs, nworkers=None, parallel=None, blocksize=None):
                 hsh_dct.update({typ: typ_paths})
                 result.update({hsh: hsh_dct})
     return result
-
-if __name__ == '__main__':
-
-    desc = "Find same files and dirs based on file hashes."
-    parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('files_dirs', nargs='+', metavar='file/dir',
-                        help='files and/or dirs to compare', default=[])
-    parser.add_argument('-n', '--nworkers', type=int,
-                        default=None,
-                        help='number of worker threads for parallel hash calc '
-                             'in Merkle tree')
-    parser.add_argument('-b', '--blocksize', 
-                        default=co.size2str(calc.BLOCKSIZE),
-                        help='read-in blocksize in hash calculation, '
-                             'use units K,M,G as in 100M, 218K or just '
-                             '1024 (bytes) '
-                             '[%(default)s]')
-    args = parser.parse_args()
-    print(json.dumps(main(files_dirs=args.files_dirs, 
-                          nworkers=args.nworkers,
-                          parallel='threads',
-                          blocksize=co.str2size(args.blocksize))))

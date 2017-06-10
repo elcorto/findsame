@@ -11,7 +11,7 @@ usage
 
 ::
 
-	$ ./fs.py -h
+	$ fs.py -h
 	usage: fs.py [-h] [-n NCORES] [-b BLOCKSIZE] file/dir [file/dir ...]
 
 	Find same files and dirs based on file hashes.

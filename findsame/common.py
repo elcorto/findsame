@@ -1,3 +1,5 @@
+import sys
+
 KiB = 1024
 MiB = KiB**2
 GiB = KiB**3
@@ -95,3 +97,6 @@ class lazyprop(object):
         setattr(obj,self.func_name,value)
         return value
 
+
+def debug_msg(msg):
+    sys.stderr.write(msg + "\n")

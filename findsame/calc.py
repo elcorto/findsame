@@ -21,14 +21,10 @@ python3
 import os, hashlib, sys
 ##from multiprocessing import Pool # same as ProcessPoolExecutor
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
-from findsame.lib import common as co
+from findsame import common as co
 
 VERBOSE = False
 BLOCKSIZE = 256*1024
-
-def debug_msg(msg):
-    sys.stderr.write(msg + "\n")
-
 
 def hashsum(x):
     """SHA1 hash of a string."""
@@ -108,7 +104,7 @@ class Element:
     @co.lazyprop
     def hash(self):
         if VERBOSE:
-            debug_msg("hash: {}".format(self.name))
+            co.debug_msg("hash: {}".format(self.name))
         return self._get_hash()
 
     def _get_hash(self):
@@ -186,14 +182,14 @@ class MerkleTree:
             for base in files:
                 fn = os.path.join(root, base)
                 if VERBOSE:
-                    debug_msg("build_tree: {}".format(fn))
+                    co.debug_msg("build_tree: {}".format(fn))
                 # skipping links
                 if os.path.exists(fn) and os.path.isfile(fn):
                     leaf = Leaf(name=fn, fn=fn, blocksize=self.blocksize)
                     node.add_child(leaf)
                     leafs[fn] = leaf
                 else:
-                    debug_msg("SKIP: {}".format(fn))
+                    co.debug_msg("SKIP: {}".format(fn))
             # add node as child to parent node, relies on top-down os.walk
             # root        = /foo/bar/baz
             # parent_root = /foo/bar

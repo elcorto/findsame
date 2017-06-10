@@ -1,8 +1,10 @@
 import subprocess, os, json, random, sys
-from findsame.lib import calc
-from findsame.lib import common as co
+from findsame import calc
+from findsame import common as co
 pj = os.path.join
 
+
+here = os.path.abspath(os.path.dirname(__file__))
 
 #-------------------------------------------------------------------------------
 # helpers
@@ -63,13 +65,16 @@ def _preproc_json(val, ref_fn):
 
 
 def test_exe_stdout():
-    here = os.path.dirname(__file__)
     for opts in ['', '-n 2', '-b 512K']:
         for fmt, preproc_func in [('json', _preproc_json)]:
-            exe = '{here}/../fs.py {opts} 2>/dev/null'.format(here=here, opts=opts)
-            for args in ['test/data', 'test/data/*']:
-                out = subprocess.check_output('{} {}'.format(exe, args), shell=True)
+            exe = '{here}/../../bin/fs.py {opts} 2>/dev/null'.format(here=here, opts=opts)
+            for args in ['data', 'data/*']:
+                cmd = '{exe} {here}/{args}'.format(exe=exe, args=args,
+                                                   here=here)
+                print(cmd)
+                out = subprocess.check_output(cmd, shell=True)
                 out = out.decode()
+                out = out.replace(here + '/','')
                 print(out)
                 ref_fn = '{here}/ref_output_{fmt}'.format(here=here, fmt=fmt)
                 val, ref, comp = preproc_func(out, ref_fn)
