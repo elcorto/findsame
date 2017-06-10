@@ -13,10 +13,15 @@ except ImportError:
     HAVE_MPL = False
 
 from findsame.benchmark import parallel as pl 
-from findsame.benchmark.psweep import seq2dicts, mkparams, run
+from psweep.psweep import seq2dicts, run, loops2params
+from itertools import product
 from findsame.lib.common import KiB, MiB, GiB, size2str
 from findsame.lib import calc
 pj = os.path.join
+
+
+def mkparams(*args):
+    return loops2params(product(*args))
 
 
 def bytes_logspace(start, stop, num):
