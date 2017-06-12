@@ -15,8 +15,8 @@ except ImportError:
 from findsame import parallel as pl 
 from psweep.psweep import seq2dicts, run, loops2params
 from itertools import product
-from findsame.lib.common import KiB, MiB, GiB, size2str
-from findsame.lib import calc
+from findsame.common import KiB, MiB, GiB, size2str
+from findsame import calc
 pj = os.path.join
 
 
@@ -37,12 +37,15 @@ def bytes_linspace(start, stop, num):
 
 
 def write(fn, size):
+    """Write a single file of `size` in bytes to path `fn`."""
     data = b'x'*size
     with open(fn, 'wb') as fd:
         fd.write(data)
 
 
 def write_single_files(testdir, sizes):
+    """Wite ``len(sizes)`` files to ``{testdir}/filesize_{size}/file``. Each
+    file has ``sizes[i]`` in bytes. Return a list of file names."""
     files = []
     for filesize in sizes:
         dr = pj(testdir, 'filesize_{}'.format(size2str(filesize)))
@@ -54,6 +57,12 @@ def write_single_files(testdir, sizes):
 
 
 def write_file_groups(testdir, sizes, group_size=None):
+    """For each file size (bytes) in `sizes`, write a group of ``nfiles`` files
+    ``{testdir}/filesize_{size}/file_{idx}; idx=0...nfiles-1``, such that each
+    dir ``filesize_{size}`` has approimately ``group_size``. If `group_size` is
+    ommitted, then use ``group_size=max(size)`` such that the the group with
+    the largest file ``size`` has only one file. Returns lists of group dirs
+    and file names."""
     if group_size is None:
         group_size = max(sizes)
     else:
@@ -70,6 +79,7 @@ def write_file_groups(testdir, sizes, group_size=None):
         if not os.path.exists(dr):
             os.makedirs(dr, exist_ok=True)
             nfiles = int(group_size) // filesize
+            assert nfiles >= 1
             for idx in range(nfiles):
                 fn = pj(dr, 'file_{}'.format(idx))
                 write(fn, filesize)
@@ -80,6 +90,7 @@ def write_file_groups(testdir, sizes, group_size=None):
 
 
 def func(dct, stmt=None, setup=None):
+    """Callback func for psweep.run()."""
     timing = timeit.repeat(stmt.format(**dct),
                            setup,
                            repeat=3,
@@ -124,12 +135,9 @@ def plot(study, df, xprop, yprop, cprop=None, plot='plot'):
         fig.savefig("pics/{study}.{ext}".format(study=study, ext=ext), dpi=300)
 
 
-def bench_main(tmpdir):
-    os.makedirs(tmpdir, exist_ok=True)
-
-    setup = "from findsame import fs"
-    stmt = """fs.main({files_dirs}, nworkers={nworkers}, parallel='{parallel}',
-                      blocksize={blocksize})"""
+def bench_main_blocksize_filesize(tmpdir):
+    setup = "from findsame import main"
+    stmt = """main.main({files_dirs}, blocksize={blocksize})"""
 
     df = pd.DataFrame()
     params = []
@@ -147,15 +155,13 @@ def bench_main(tmpdir):
         testdir = mkdtemp(dir=tmpdir, prefix=study)
         files = write_single_files(testdir, filesize)
         this = mkparams(zip(seq2dicts('filesize', filesize),
-                            seq2dicts('filesize_str', list(map(size2str,
-                                                               filesize))),
+                            seq2dicts('filesize_str', map(size2str,
+                                                          filesize)),
                             seq2dicts('files_dirs', [[x] for x in files])),
                         seq2dicts('study', [study]),
-                        seq2dicts('nworkers', [1]),
-                        seq2dicts('parallel', ['threads']),
                         zip(seq2dicts('blocksize', blocksize),
-                            seq2dicts('blocksize_str', list(map(size2str,
-                                                                blocksize)))))
+                            seq2dicts('blocksize_str', map(size2str,
+                                                           blocksize))))
         params += this
     
     
@@ -173,27 +179,9 @@ def bench_main(tmpdir):
 
     this = mkparams(seq2dicts('files_dirs', [[testdir]]),
                     seq2dicts('study', [study]),
-                    seq2dicts('nworkers', [1]),
-                    seq2dicts('parallel', ['threads']),
                     zip(seq2dicts('blocksize', blocksize),
-                        seq2dicts('blocksize_str', list(map(size2str,
-                                                            blocksize)))))
-    params += this
-
-    # same collection as above, test nworkers, using the "best" blocksize
-    blocksize = np.array([256*KiB])
-    if sys.platform == 'freebsd10':
-        parallel = ['threads']
-    else:
-        parallel = ['threads', 'procs']
-    # re-use files from above
-    this = mkparams(seq2dicts('files_dirs', [[testdir]]),
-                    zip(seq2dicts('study', parallel),
-                        seq2dicts('parallel', parallel)),
-                    seq2dicts('nworkers', [1,2,3,4,5,6,7,8]),
-                    zip(seq2dicts('blocksize', blocksize),
-                        seq2dicts('blocksize_str', list(map(size2str,
-                                                            blocksize)))))
+                        seq2dicts('blocksize_str', map(size2str,
+                                                       blocksize))))
     params += this
 
     df = run(df, lambda p: func(p, stmt, setup), params)
@@ -201,23 +189,114 @@ def bench_main(tmpdir):
         plot('blocksize_single', df, 'blocksize', 'timing', 'filesize_str', plot='semilogx')
         plot('filesize_single', df, 'filesize', 'timing', 'blocksize_str')
         plot('blocksize_collection', df, 'blocksize', 'timing', plot='semilogx')
-        plot('threads', df, 'nworkers', 'timing', 'blocksize_str')
-        plot('procs', df, 'nworkers', 'timing', 'blocksize_str')
         plt.show()
     return df
 
 
-def worker_bench_parallel(fn):
+def bench_main_parallel(tmpdir):
+    setup = "from findsame import main"
+    stmt = """main.main({files_dirs}, blocksize={blocksize},
+                        nthreads={nthreads}, nprocs={nprocs})"""
+
+    df = pd.DataFrame()
+    params = []
+    
+    # collection of different file sizes (a.k.a. "realistic" synthetic data),
+    # test blocksize, use the whole "testdir" as argument for findsame 
+    collection_size = GiB*0.1
+    ngroups = 10 
+    study = 'collection_main_parallel'
+    filesize = bytes_logspace(128*KiB, collection_size/ngroups,
+                              ngroups)
+    blocksize = np.array([256*KiB])
+    testdir = mkdtemp(dir=tmpdir, prefix=study)
+    write_file_groups(testdir, filesize,
+                      int(collection_size/ngroups))
+
+    this = mkparams(seq2dicts('files_dirs', [[testdir]]),
+                    seq2dicts('study', ['main_parallel']),
+                    zip(seq2dicts('nthreads', range(1,6)),
+                        seq2dicts('nworkers', range(1,6))),
+                    seq2dicts('nprocs', [1]),
+                    seq2dicts('pool_type', ['thread']),
+                    zip(seq2dicts('blocksize', blocksize),
+                        seq2dicts('blocksize_str', list(map(size2str,
+                                                            blocksize)))))
+    params += this
+    this = mkparams(seq2dicts('files_dirs', [[testdir]]),
+                    seq2dicts('study', ['main_parallel']),
+                    zip(seq2dicts('nprocs', range(1,6)),
+                        seq2dicts('nworkers', range(1,6))),
+                    seq2dicts('nthreads', [1]),
+                    seq2dicts('pool_type', ['proc']),
+                    zip(seq2dicts('blocksize', blocksize),
+                        seq2dicts('blocksize_str', list(map(size2str,
+                                                            blocksize)))))
+    params += this
+
+    df = run(df, lambda p: func(p, stmt, setup), params)
+    if HAVE_MPL:
+        plot('main_parallel', df, 'nworkers', 'timing', 'pool_type')
+        plt.show()
+    return df
+
+
+def bench_main_parallel_2d(tmpdir):
+    setup = "from findsame import main"
+    stmt = """main.main({files_dirs}, blocksize={blocksize},
+                        nthreads={nthreads}, nprocs={nprocs})"""
+
+    df = pd.DataFrame()
+    params = []
+    
+    collection_size = GiB*0.1
+    ngroups = 10 
+    study = 'collection_main_parallel_2d'
+    filesize = bytes_logspace(128*KiB, collection_size/ngroups,
+                              ngroups)
+    blocksize = np.array([256*KiB])
+    testdir = mkdtemp(dir=tmpdir, prefix=study)
+    write_file_groups(testdir, filesize,
+                      int(collection_size/ngroups))
+
+    this = mkparams(seq2dicts('files_dirs', [[testdir]]),
+                    seq2dicts('study', ['main_parallel']),
+                    seq2dicts('nthreads', range(1,6)),
+                    seq2dicts('nprocs', range(1,6)),
+                    zip(seq2dicts('blocksize', blocksize),
+                        seq2dicts('blocksize_str', list(map(size2str,
+                                                            blocksize)))))
+    params += this
+
+    df = run(df, lambda p: func(p, stmt, setup), params)
+    if HAVE_MPL:
+        from mpl_toolkits.mplot3d import Axes3D
+        xx = df.nprocs.values
+        yy = df.nthreads.values
+        zz = df.timing.values
+        x = np.unique(xx)
+        y = np.unique(yy)
+        X,Y = np.meshgrid(x, y, indexing='ij');
+        Z = zz.reshape((len(x),len(y))).T
+        fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
+        ax.set_xlabel('procs')
+        ax.set_ylabel('threads') 
+        ax.plot_wireframe(X,Y,Z)
+        ax.scatter(xx, yy, zz)
+        plt.show()
+    return df
+
+
+
+def worker_bench_hash_file_parallel(fn):
     return calc.hash_file(fn, blocksize=256*KiB)
   
 
-def bench_parallel(tmpdir):
-    os.makedirs(tmpdir, exist_ok=True)
-    
+def bench_hash_file_parallel(tmpdir):
     df = pd.DataFrame()
     params = []
 
-    collection_size = GiB
+    collection_size = GiB*0.1
     ngroups = 10 
     study = 'parallel'
     filesize = bytes_logspace(128*KiB, collection_size/ngroups,
@@ -237,7 +316,7 @@ def bench_parallel(tmpdir):
         ctx = dict(pool_map=pool_map,
                    pl=pl,
                    files=files,
-                   worker=worker_bench_parallel,
+                   worker=worker_bench_hash_file_parallel,
                    )
         timing = timeit.repeat(stmt.format(**dct),
                                setup='pass',
@@ -267,13 +346,17 @@ with pool_map['{pool_type}']({nworkers}) as pool:
         
     return df
 
+
+def update(df1, df2):
+    return df1.append(df2, ignore_index=True)
+
 if __name__ == '__main__':
     tmpdir = './files'
     results = './results.json'
-    if os.path.exists(results):
-        print("{} found, just plotting".format(results))
-        df = pd.io.json.read_json(results)
-    else:
-        print("running benchmark")
-        bench_main(tmpdir).to_json(results)
-        bench_parallel(tmpdir).to_json(results)
+    os.makedirs(tmpdir, exist_ok=True)
+    df = pd.DataFrame()
+##    df = update(df, bench_main_blocksize_filesize(tmpdir))
+##    df = update(df, bench_hash_file_parallel(tmpdir))
+    df = update(df, bench_main_parallel(tmpdir))
+    df = update(df, bench_main_parallel_2d(tmpdir))
+    df.to_json(results, orient='split')

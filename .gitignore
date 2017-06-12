@@ -1,6 +1,6 @@
 **.pyc
 **.swp
 **.egg-info
-benchmark/files/
-benchmark/pics/
-benchmark/results.json
+findsame/benchmark/files/
+findsame/benchmark/pics/
+findsame/benchmark/results.json
