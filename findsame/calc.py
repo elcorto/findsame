@@ -99,6 +99,7 @@ def split_path(path):
 class Element:
     def __init__(self, name='noname'):
         self.name = name
+        self.has_hash = False
 
     def __repr__(self):
         return "{}:{}".format(self.kind, self.name)
@@ -107,6 +108,7 @@ class Element:
     def hash(self):
         if VERBOSE:
             co.debug_msg("hash: {}".format(self.name))
+        self.has_hash = True
         return self._get_hash()
 
     def _get_hash(self):
@@ -233,21 +235,18 @@ class MerkleTree:
                                              self.leafs.items(),
                                              chunksize=1))
         
-        # The dir_hashes calculation below causes slowdown with
+        # The dir_hashes calculation below causes a slowdown with
         # ProcessPoolExecutor if we do not assign calculated leaf hashes
         # beforehand. This is b/c we do not operate on self.file_hashes, which
-        # WAS calculated fast in parallel, but on MerkleTree, which is NOT
+        # WAS calculated fast in parallel, but on MerkleTree. MerkleTree is NOT
         # shared between processes. Therefore, when we leave the pool context,
         # the in-memory MerkleTree object of each process, which is only
-        # *partially* populated w/ hashes anyway, gets deleted. The dir_hashes
-        # calculation below triggers a new hash calculation for the entire
-        # tree, such that we have exactly doubled the run time!
-        #
-        # XXX optimize assignment, maybe do it in MerkleTree and check
-        # if it was already present, this kind of washes out the nice property-based
-        # lazy-eval recursion of the single-threaded code, but that's the way it is ...
+        # *partially* populated w/ hashes anyway, gets deleted. Then, the
+        # dir_hashes calculation below triggers a new hash calculation for the
+        # entire tree, such that we have exactly doubled the run time!
         if useproc:
             for leaf in self.leafs.values():
-                leaf.hash = self.file_hashes[leaf.name]
+                if not leaf.has_hash:
+                    leaf.hash = self.file_hashes[leaf.name]
         
         self.dir_hashes = dict((k,v.hash) for k,v in self.nodes.items())
