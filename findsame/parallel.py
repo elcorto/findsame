@@ -31,7 +31,7 @@ class SequentialPoolExecutor:
     def __init__(self, *args, **kwds):
         pass
 
-    def map(self, worker, seq):
+    def map(self, worker, seq, **kwds):
         for item in seq:
             yield worker(item)
     
@@ -62,7 +62,6 @@ class ProcessAndThreadPoolExecutor(Executor):
             # evaluation of the map() method.
             return iter(list((thread_pool.map(self.thread_worker, subseq))))
     
-    # XXX add special-case code for nthreads and/or nprocs==1, avoid overhead
     def map(self, thread_worker, seq, **kwds):
         # Cannot define process_worker inside map():
         #     AttributeError: Can't pickle local object

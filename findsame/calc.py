@@ -20,9 +20,10 @@ python3
 
 import os, hashlib, sys
 ##from multiprocessing import Pool # same as ProcessPoolExecutor
-##from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from findsame import common as co
-from findsame.parallel import ProcessAndThreadPoolExecutor
+from findsame.parallel import ProcessAndThreadPoolExecutor, \
+    SequentialPoolExecutor
 
 VERBOSE = False
 BLOCKSIZE = 256*1024
@@ -205,17 +206,48 @@ class MerkleTree:
     @staticmethod
     def _worker(kv):
         return kv[0], kv[1].hash
-
+    
+    # XXX maybe add special-case code to ProcessAndThreadPoolExecutor
     def calc_hashes(self):
+        useproc = False
         """Trigger recursive hash calculation."""
-        # leafs can be calculated in parallel since there are no dependencies,
-        # but the whole operation is about 50% IO-bound, speedup is moderate or
-        # even < 1
-        with ProcessAndThreadPoolExecutor(nprocs=self.nprocs,
-                                          nthreads=self.nthreads) as pool: 
+        # leafs can be calculated in parallel since there are no dependencies
+        if self.nthreads == 1 and self.nprocs == 1:
+            # same as 
+            #   self.file_hashes = dict((k,v.hash) for k,v in self.leafs.items())
+            # just looks nicer :)
+            getpool = lambda: SequentialPoolExecutor()
+        elif self.nthreads == 1:
+            assert self.nprocs > 1
+            getpool = lambda: ProcessPoolExecutor(self.nprocs)
+            useproc = True
+        elif self.nprocs == 1:
+            assert self.nthreads > 1
+            getpool = lambda: ThreadPoolExecutor(self.nthreads)
+        else:
+            getpool = lambda: ProcessAndThreadPoolExecutor(nprocs=self.nprocs,
+                                                           nthreads=self.nthreads)
+            useproc = True
+        with getpool() as pool: 
             self.file_hashes = dict(pool.map(self._worker, 
                                              self.leafs.items(),
                                              chunksize=1))
+        
+        # The dir_hashes calculation below causes slowdown with
+        # ProcessPoolExecutor if we do not assign calculated leaf hashes
+        # beforehand. This is b/c we do not operate on self.file_hashes, which
+        # WAS calculated fast in parallel, but on MerkleTree, which is NOT
+        # shared between processes. Therefore, when we leave the pool context,
+        # the in-memory MerkleTree object of each process, which is only
+        # *partially* populated w/ hashes anyway, gets deleted. The dir_hashes
+        # calculation below triggers a new hash calculation for the entire
+        # tree, such that we have exactly doubled the run time!
+        #
+        # XXX optimize assignment, maybe do it in MerkleTree and check
+        # if it was already present, this kind of washes out the nice property-based
+        # lazy-eval recursion of the single-threaded code, but that's the way it is ...
+        if useproc:
+            for leaf in self.leafs.values():
+                leaf.hash = self.file_hashes[leaf.name]
+        
         self.dir_hashes = dict((k,v.hash) for k,v in self.nodes.items())
-
-
