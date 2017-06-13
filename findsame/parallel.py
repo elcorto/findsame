@@ -54,12 +54,12 @@ class ProcessAndThreadPoolExecutor(Executor):
         """Worker function for ProcessPoolExecutor. Spawn a thread pool of
         self.nthreads size in each process."""
         with ThreadPoolExecutor(self.nthreads) as thread_pool:
-            # Need to call list here in between. else:
+            # Need to call list() here in between, else:
             #     concurrent.futures.process.BrokenProcessPool: A process in the
             #     process pool was terminated abruptly while the future was running
             #     or pending.
             # Looks like we need to force a wait for the completion of the
-            # evaluation of the map() method.
+            # evaluation of thread_pool.map().
             return iter(list((thread_pool.map(self.thread_worker, subseq))))
     
     def map(self, thread_worker, seq, **kwds):

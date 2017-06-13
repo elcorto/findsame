@@ -102,17 +102,15 @@ def func(dct, stmt=None, setup=None):
     return {'timing': min(timing)}
 
 
-def bench_main_blocksize_filesize(tmpdir):
+def bench_main_blocksize_filesize(tmpdir, maxsize):
     setup = "from findsame import main"
     stmt = """main.main({files_dirs}, blocksize={blocksize})"""
-
-    df = pd.DataFrame()
     params = []
     
     # single files, test filesize and blocksize
-    max_filesize = 0.5*GiB
+    max_filesize = maxsize
     max_blocksize = min(200*MiB, max_filesize)
-    cases = [(np.array([filesize]),
+    cases = [(np.array([max_filesize]),
               bytes_logspace(10*KiB, max_blocksize, 20),
               'main_blocksize_single'),
              (bytes_linspace(10*MiB, max_filesize, 5),
@@ -128,87 +126,89 @@ def bench_main_blocksize_filesize(tmpdir):
                                                           filesize)),
                             seq2dicts('files_dirs', [[x] for x in files])),
                         seq2dicts('study', [study]),
+                        seq2dicts('maxsize_str', [size2str(maxsize)]),
                         zip(seq2dicts('blocksize', blocksize),
                             seq2dicts('blocksize_str', map(size2str,
                                                            blocksize))))
         params += this
     
     study = 'main_blocksize'
-    testdir, group_dirs, files = write_collection(GiB, tmpdir=tmpdir, 
+    testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir, 
                                                   study=study)
-    blocksize = bytes_logspace(10*KiB, 0.2*GiB, 20)
-
+    blocksize = bytes_logspace(10*KiB, min(200*MiB, maxsize), 20)
     this = mkparams(seq2dicts('files_dirs', [[testdir]]),
                     seq2dicts('study', [study]),
+                    seq2dicts('maxsize_str', [size2str(maxsize)]),
                     zip(seq2dicts('blocksize', blocksize),
                         seq2dicts('blocksize_str', map(size2str,
                                                        blocksize))))
     params += this
-
+    df = pd.DataFrame()
     df = run(df, lambda p: func(p, stmt, setup), params)
     return df
 
 
-def bench_main_parallel(tmpdir):
+def bench_main_parallel(tmpdir, maxsize):
     setup = "from findsame import main"
     stmt = """main.main({files_dirs}, blocksize={blocksize},
                         nthreads={nthreads}, nprocs={nprocs})"""
-
-    df = pd.DataFrame()
     params = []
     
     study = 'main_parallel'
-    testdir, group_dirs, files = write_collection(GiB, tmpdir=tmpdir, 
+    testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir, 
                                                   study=study)
     blocksize = np.array([256*KiB])
-
     this = mkparams(seq2dicts('files_dirs', [[testdir]]),
                     seq2dicts('study', [study]),
                     zip(seq2dicts('nthreads', range(1,6)),
                         seq2dicts('nworkers', range(1,6))),
                     seq2dicts('nprocs', [1]),
                     seq2dicts('pool_type', ['thread']),
+                    seq2dicts('maxsize_str', [size2str(maxsize)]),
                     zip(seq2dicts('blocksize', blocksize),
                         seq2dicts('blocksize_str', list(map(size2str,
                                                             blocksize)))))
     params += this
+    
     this = mkparams(seq2dicts('files_dirs', [[testdir]]),
                     seq2dicts('study', [study]),
                     zip(seq2dicts('nprocs', range(1,6)),
                         seq2dicts('nworkers', range(1,6))),
                     seq2dicts('nthreads', [1]),
                     seq2dicts('pool_type', ['proc']),
+                    seq2dicts('maxsize_str', [size2str(maxsize)]),
                     zip(seq2dicts('blocksize', blocksize),
                         seq2dicts('blocksize_str', list(map(size2str,
                                                             blocksize)))))
     params += this
 
+    df = pd.DataFrame()
     df = run(df, lambda p: func(p, stmt, setup), params)
     return df
 
 
-def bench_main_parallel_2d(tmpdir):
+def bench_main_parallel_2d(tmpdir, maxsize):
     setup = "from findsame import main"
     stmt = """main.main({files_dirs}, blocksize={blocksize},
                         nthreads={nthreads}, nprocs={nprocs})"""
 
-    df = pd.DataFrame()
     params = []
     
     study = 'main_parallel_2d'
-    testdir, group_dirs, files = write_collection(GiB, tmpdir=tmpdir, 
+    testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir, 
                                                   study=study)
     blocksize = np.array([256*KiB])
-
     this = mkparams(seq2dicts('files_dirs', [[testdir]]),
                     seq2dicts('study', [study]),
                     seq2dicts('nthreads', range(1,6)),
                     seq2dicts('nprocs', range(1,6)),
+                    seq2dicts('maxsize_str', [size2str(maxsize)]),
                     zip(seq2dicts('blocksize', blocksize),
                         seq2dicts('blocksize_str', list(map(size2str,
                                                             blocksize)))))
     params += this
 
+    df = pd.DataFrame()
     df = run(df, lambda p: func(p, stmt, setup), params)
     return df
 
@@ -217,12 +217,11 @@ def worker_bench_hash_file_parallel(fn):
     return calc.hash_file(fn, blocksize=256*KiB)
 
 
-def bench_hash_file_parallel(tmpdir):
-    df = pd.DataFrame()
+def bench_hash_file_parallel(tmpdir, maxsize):
     params = []
 
     study = 'hash_file_parallel'
-    testdir, group_dirs, files = write_collection(GiB, tmpdir=tmpdir, 
+    testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir, 
                                                   study=study)
    
     pool_map = {'seq': pl.SequentialPoolExecutor,
@@ -253,12 +252,15 @@ with pool_map['{pool_type}']({nworkers}) as pool:
     this = mkparams(seq2dicts('pool_type', 
                               [k for k in pool_map.keys() if k != 'seq']),
                     seq2dicts('nworkers', range(1,6)),
-                    [{'study': study}],
+                    seq2dicts('study', [study]),
+                    seq2dicts('maxsize_str', [size2str(maxsize)]),
                     )
     params += this
     # non-pool reference
-    params += [{'study': study, 'pool_type': 'seq', 'nworkers': 1}]
+    params += [{'study': study, 'pool_type': 'seq', 'nworkers': 1, 
+                'maxsize_str': size2str(maxsize)}]
 
+    df = pd.DataFrame()
     df = run(df, lambda p: func(p, stmt), params)
     return df
 
@@ -266,13 +268,15 @@ with pool_map['{pool_type}']({nworkers}) as pool:
 def update(df1, df2):
     return df1.append(df2, ignore_index=True)
 
+
 if __name__ == '__main__':
     tmpdir = './files'
     results = './results.json'
     os.makedirs(tmpdir, exist_ok=True)
     df = pd.DataFrame()
-    df = update(df, bench_main_blocksize_filesize(tmpdir))
-    df = update(df, bench_hash_file_parallel(tmpdir))
-    df = update(df, bench_main_parallel(tmpdir))
-    df = update(df, bench_main_parallel_2d(tmpdir))
+    for maxsize in [GiB, 2*GiB]:
+        df = update(df, bench_main_blocksize_filesize(tmpdir, maxsize))
+        df = update(df, bench_hash_file_parallel(tmpdir, maxsize))
+        df = update(df, bench_main_parallel(tmpdir, maxsize))
+        df = update(df, bench_main_parallel_2d(tmpdir, maxsize))
     df.to_json(results, orient='split')
