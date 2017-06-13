@@ -89,6 +89,16 @@ def write_file_groups(testdir, sizes, group_size=None):
     return group_dirs, files
 
 
+def write_collection(collection_size=GiB, tmpdir=None, study=None, ngroups=10):
+    filesize = bytes_logspace(128*KiB, collection_size/ngroups,
+                              ngroups)
+    testdir = mkdtemp(dir=tmpdir, prefix=study)
+    group_dirs, files = write_file_groups(testdir, filesize,
+                                          int(collection_size/ngroups))
+    return testdir, group_dirs, files
+
+
+
 def func(dct, stmt=None, setup=None):
     """Callback func for psweep.run()."""
     timing = timeit.repeat(stmt.format(**dct),
@@ -164,18 +174,10 @@ def bench_main_blocksize_filesize(tmpdir):
                                                            blocksize))))
         params += this
     
-    
-    # collection of different file sizes (a.k.a. "realistic" synthetic data),
-    # test blocksize, use the whole "testdir" as argument for findsame 
-    collection_size = GiB*0.1
-    ngroups = 10 
     study = 'blocksize_collection'
-    filesize = bytes_logspace(128*KiB, collection_size/ngroups,
-                              ngroups)
+    testdir, group_dirs, files = write_collection(GiB, tmpdir=tmpdir, 
+                                                  study=study)
     blocksize = bytes_logspace(10*KiB, 200*MiB, 20)
-    testdir = mkdtemp(dir=tmpdir, prefix=study)
-    write_file_groups(testdir, filesize,
-                      int(collection_size/ngroups))
 
     this = mkparams(seq2dicts('files_dirs', [[testdir]]),
                     seq2dicts('study', [study]),
@@ -201,17 +203,10 @@ def bench_main_parallel(tmpdir):
     df = pd.DataFrame()
     params = []
     
-    # collection of different file sizes (a.k.a. "realistic" synthetic data),
-    # test blocksize, use the whole "testdir" as argument for findsame 
-    collection_size = GiB*0.1
-    ngroups = 10 
     study = 'collection_main_parallel'
-    filesize = bytes_logspace(128*KiB, collection_size/ngroups,
-                              ngroups)
+    testdir, group_dirs, files = write_collection(GiB, tmpdir=tmpdir, 
+                                                  study=study)
     blocksize = np.array([256*KiB])
-    testdir = mkdtemp(dir=tmpdir, prefix=study)
-    write_file_groups(testdir, filesize,
-                      int(collection_size/ngroups))
 
     this = mkparams(seq2dicts('files_dirs', [[testdir]]),
                     seq2dicts('study', ['main_parallel']),
@@ -249,15 +244,10 @@ def bench_main_parallel_2d(tmpdir):
     df = pd.DataFrame()
     params = []
     
-    collection_size = GiB*0.1
-    ngroups = 10 
     study = 'collection_main_parallel_2d'
-    filesize = bytes_logspace(128*KiB, collection_size/ngroups,
-                              ngroups)
+    testdir, group_dirs, files = write_collection(GiB, tmpdir=tmpdir, 
+                                                  study=study)
     blocksize = np.array([256*KiB])
-    testdir = mkdtemp(dir=tmpdir, prefix=study)
-    write_file_groups(testdir, filesize,
-                      int(collection_size/ngroups))
 
     this = mkparams(seq2dicts('files_dirs', [[testdir]]),
                     seq2dicts('study', ['main_parallel']),
@@ -290,21 +280,16 @@ def bench_main_parallel_2d(tmpdir):
 
 def worker_bench_hash_file_parallel(fn):
     return calc.hash_file(fn, blocksize=256*KiB)
-  
+
 
 def bench_hash_file_parallel(tmpdir):
     df = pd.DataFrame()
     params = []
 
-    collection_size = GiB*0.1
-    ngroups = 10 
     study = 'parallel'
-    filesize = bytes_logspace(128*KiB, collection_size/ngroups,
-                              ngroups)
-    testdir = mkdtemp(dir=tmpdir, prefix=study)
-    _, files = write_file_groups(testdir, filesize,
-                                 int(collection_size/ngroups))
-    
+    testdir, group_dirs, files = write_collection(GiB, tmpdir=tmpdir, 
+                                                  study=study)
+   
     pool_map = {'seq': pl.SequentialPoolExecutor,
                 'thread': pl.ThreadPoolExecutor,
                 'proc': pl.ProcessPoolExecutor,
@@ -337,7 +322,7 @@ with pool_map['{pool_type}']({nworkers}) as pool:
                     )
     params += this
     # non-pool reference
-    params += [{'study': 'parallel', 'pool_type': 'seq', 'nworkers': 1}]
+    params += [{'study': study, 'pool_type': 'seq', 'nworkers': 1}]
 
     df = run(df, lambda p: func(p, stmt), params)
     if HAVE_MPL:
@@ -355,8 +340,8 @@ if __name__ == '__main__':
     results = './results.json'
     os.makedirs(tmpdir, exist_ok=True)
     df = pd.DataFrame()
-##    df = update(df, bench_main_blocksize_filesize(tmpdir))
-##    df = update(df, bench_hash_file_parallel(tmpdir))
+    df = update(df, bench_main_blocksize_filesize(tmpdir))
+    df = update(df, bench_hash_file_parallel(tmpdir))
     df = update(df, bench_main_parallel(tmpdir))
     df = update(df, bench_main_parallel_2d(tmpdir))
     df.to_json(results, orient='split')
