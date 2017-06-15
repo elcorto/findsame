@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
-import timeit, os, sys
+import timeit, os, sys, shutil
 from tempfile import mkdtemp
 
 import pandas as pd
 import numpy as np
 
 from findsame import parallel as pl 
-from psweep.psweep import seq2dicts, run, loops2params
+from psweep import psweep as ps
 from itertools import product
 from findsame.common import KiB, MiB, GiB, size2str
 from findsame import calc
@@ -15,7 +15,7 @@ pj = os.path.join
 
 
 def mkparams(*args):
-    return loops2params(product(*args))
+    return ps.loops2params(product(*args))
 
 
 def bytes_logspace(start, stop, num):
@@ -33,6 +33,7 @@ def bytes_linspace(start, stop, num):
 def write(fn, size):
     """Write a single file of `size` in bytes to path `fn`."""
     data = b'x'*int(size)
+    print("write: {}".format(fn))
     with open(fn, 'wb') as fd:
         fd.write(data)
 
@@ -94,7 +95,7 @@ def write_collection(collection_size=GiB, tmpdir=None, study=None, ngroups=10):
 
 
 def func(dct, stmt=None, setup=None):
-    """Callback func for psweep.run()."""
+    """Default callback func for psweep.run()."""
     timing = timeit.repeat(stmt.format(**dct),
                            setup,
                            repeat=3,
@@ -121,14 +122,14 @@ def bench_main_blocksize_filesize(tmpdir, maxsize):
     for filesize, blocksize, study in cases:
         testdir = mkdtemp(dir=tmpdir, prefix=study)
         files = write_single_files(testdir, filesize)
-        this = mkparams(zip(seq2dicts('filesize', filesize),
-                            seq2dicts('filesize_str', map(size2str,
+        this = mkparams(zip(ps.seq2dicts('filesize', filesize),
+                            ps.seq2dicts('filesize_str', map(size2str,
                                                           filesize)),
-                            seq2dicts('files_dirs', [[x] for x in files])),
-                        seq2dicts('study', [study]),
-                        seq2dicts('maxsize_str', [size2str(maxsize)]),
-                        zip(seq2dicts('blocksize', blocksize),
-                            seq2dicts('blocksize_str', map(size2str,
+                            ps.seq2dicts('files_dirs', [[x] for x in files])),
+                        ps.seq2dicts('study', [study]),
+                        ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
+                        zip(ps.seq2dicts('blocksize', blocksize),
+                            ps.seq2dicts('blocksize_str', map(size2str,
                                                            blocksize))))
         params += this
     
@@ -136,16 +137,15 @@ def bench_main_blocksize_filesize(tmpdir, maxsize):
     testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir, 
                                                   study=study)
     blocksize = bytes_logspace(10*KiB, min(200*MiB, maxsize), 20)
-    this = mkparams(seq2dicts('files_dirs', [[testdir]]),
-                    seq2dicts('study', [study]),
-                    seq2dicts('maxsize_str', [size2str(maxsize)]),
-                    zip(seq2dicts('blocksize', blocksize),
-                        seq2dicts('blocksize_str', map(size2str,
+    this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
+                    ps.seq2dicts('study', [study]),
+                    ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
+                    zip(ps.seq2dicts('blocksize', blocksize),
+                        ps.seq2dicts('blocksize_str', map(size2str,
                                                        blocksize))))
     params += this
-    df = pd.DataFrame()
-    df = run(df, lambda p: func(p, stmt, setup), params)
-    return df
+    return None, stmt, setup, params
+
 
 
 def bench_main_parallel(tmpdir, maxsize):
@@ -158,33 +158,30 @@ def bench_main_parallel(tmpdir, maxsize):
     testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir, 
                                                   study=study)
     blocksize = np.array([256*KiB])
-    this = mkparams(seq2dicts('files_dirs', [[testdir]]),
-                    seq2dicts('study', [study]),
-                    zip(seq2dicts('nthreads', range(1,6)),
-                        seq2dicts('nworkers', range(1,6))),
-                    seq2dicts('nprocs', [1]),
-                    seq2dicts('pool_type', ['thread']),
-                    seq2dicts('maxsize_str', [size2str(maxsize)]),
-                    zip(seq2dicts('blocksize', blocksize),
-                        seq2dicts('blocksize_str', list(map(size2str,
+    this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
+                    ps.seq2dicts('study', [study]),
+                    zip(ps.seq2dicts('nthreads', range(1,9)),
+                        ps.seq2dicts('nworkers', range(1,9))),
+                    ps.seq2dicts('nprocs', [1]),
+                    ps.seq2dicts('pool_type', ['thread']),
+                    ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
+                    zip(ps.seq2dicts('blocksize', blocksize),
+                        ps.seq2dicts('blocksize_str', list(map(size2str,
                                                             blocksize)))))
     params += this
     
-    this = mkparams(seq2dicts('files_dirs', [[testdir]]),
-                    seq2dicts('study', [study]),
-                    zip(seq2dicts('nprocs', range(1,6)),
-                        seq2dicts('nworkers', range(1,6))),
-                    seq2dicts('nthreads', [1]),
-                    seq2dicts('pool_type', ['proc']),
-                    seq2dicts('maxsize_str', [size2str(maxsize)]),
-                    zip(seq2dicts('blocksize', blocksize),
-                        seq2dicts('blocksize_str', list(map(size2str,
+    this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
+                    ps.seq2dicts('study', [study]),
+                    zip(ps.seq2dicts('nprocs', range(1,9)),
+                        ps.seq2dicts('nworkers', range(1,9))),
+                    ps.seq2dicts('nthreads', [1]),
+                    ps.seq2dicts('pool_type', ['proc']),
+                    ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
+                    zip(ps.seq2dicts('blocksize', blocksize),
+                        ps.seq2dicts('blocksize_str', list(map(size2str,
                                                             blocksize)))))
     params += this
-
-    df = pd.DataFrame()
-    df = run(df, lambda p: func(p, stmt, setup), params)
-    return df
+    return None, stmt, setup, params
 
 
 def bench_main_parallel_2d(tmpdir, maxsize):
@@ -198,19 +195,16 @@ def bench_main_parallel_2d(tmpdir, maxsize):
     testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir, 
                                                   study=study)
     blocksize = np.array([256*KiB])
-    this = mkparams(seq2dicts('files_dirs', [[testdir]]),
-                    seq2dicts('study', [study]),
-                    seq2dicts('nthreads', range(1,6)),
-                    seq2dicts('nprocs', range(1,6)),
-                    seq2dicts('maxsize_str', [size2str(maxsize)]),
-                    zip(seq2dicts('blocksize', blocksize),
-                        seq2dicts('blocksize_str', list(map(size2str,
+    this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
+                    ps.seq2dicts('study', [study]),
+                    ps.seq2dicts('nthreads', range(1,9)),
+                    ps.seq2dicts('nprocs', range(1,9)),
+                    ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
+                    zip(ps.seq2dicts('blocksize', blocksize),
+                        ps.seq2dicts('blocksize_str', list(map(size2str,
                                                             blocksize)))))
     params += this
-
-    df = pd.DataFrame()
-    df = run(df, lambda p: func(p, stmt, setup), params)
-    return df
+    return None, stmt, setup, params
 
 
 def worker_bench_hash_file_parallel(fn):
@@ -231,14 +225,14 @@ def bench_hash_file_parallel(tmpdir, maxsize):
                 'thread,proc=1': lambda nw: pl.ProcessAndThreadPoolExecutor(1, nw),
                 }
     
-    def func(dct, stmt=None):
+    def func(dct, stmt=None, setup='pass'):
         ctx = dict(pool_map=pool_map,
                    pl=pl,
                    files=files,
                    worker=worker_bench_hash_file_parallel,
                    )
         timing = timeit.repeat(stmt.format(**dct),
-                               setup='pass',
+                               setup=setup,
                                repeat=3,
                                number=1,
                                globals=ctx)
@@ -249,34 +243,87 @@ with pool_map['{pool_type}']({nworkers}) as pool:
     x=list(pool.map(worker, files))
     """
 
-    this = mkparams(seq2dicts('pool_type', 
+    this = mkparams(ps.seq2dicts('pool_type', 
                               [k for k in pool_map.keys() if k != 'seq']),
-                    seq2dicts('nworkers', range(1,6)),
-                    seq2dicts('study', [study]),
-                    seq2dicts('maxsize_str', [size2str(maxsize)]),
+                    ps.seq2dicts('nworkers', range(1,9)),
+                    ps.seq2dicts('study', [study]),
+                    ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
                     )
     params += this
     # non-pool reference
     params += [{'study': study, 'pool_type': 'seq', 'nworkers': 1, 
                 'maxsize_str': size2str(maxsize)}]
 
-    df = pd.DataFrame()
-    df = run(df, lambda p: func(p, stmt), params)
-    return df
+    return func, stmt, setup, params
 
 
 def update(df1, df2):
     return df1.append(df2, ignore_index=True)
 
 
+# adapted from pwtools
+def backup(src, prefix='.'):
+    """Backup (copy) `src` to <src><prefix><num>, where <num> is an integer
+    starting at 0 which is incremented until there is no destination with that
+    name.
+    
+    Symlinks are handled by shutil.copy() for files and shutil.copytree() for
+    dirs. In both cases, the content of the file/dir pointed to by the link is
+    copied.
+
+    Parameters
+    ----------
+    src : str
+        name of file/dir to be copied
+    prefix : str, optional
+    """
+    if os.path.exists(src):
+        if os.path.isfile(src):
+            copy = shutil.copy
+        elif os.path.isdir(src):
+            copy = shutil.copytree
+        else:
+            raise Exception("source '%s' is not file or dir" %src)
+        idx = 0
+        dst = src + '%s%s' %(prefix,idx)
+        while os.path.exists(dst):
+            idx += 1
+            dst = src + '%s%s' %(prefix,idx)
+        # sanity check
+        if os.path.exists(dst):
+            raise Exception("destination '%s' exists" %dst)
+        else:
+            copy(src, dst)
+
+
 if __name__ == '__main__':
     tmpdir = './files'
     results = './results.json'
     os.makedirs(tmpdir, exist_ok=True)
-    df = pd.DataFrame()
-    for maxsize in [GiB, 2*GiB]:
-        df = update(df, bench_main_blocksize_filesize(tmpdir, maxsize))
-        df = update(df, bench_hash_file_parallel(tmpdir, maxsize))
-        df = update(df, bench_main_parallel(tmpdir, maxsize))
-        df = update(df, bench_main_parallel_2d(tmpdir, maxsize))
-    df.to_json(results, orient='split')
+    bench_funcs = [
+        bench_main_blocksize_filesize,
+        bench_hash_file_parallel,
+        bench_main_parallel,
+        bench_main_parallel_2d,
+        ]
+    if len(sys.argv) == 2:
+        df = ps.df_json_read(sys.argv[1])
+    else:
+        df = pd.DataFrame()
+    # hack for strange FreeBSD 10.3 (FreeNAS) 2 GB file size limit issue
+    if sys.platform == 'freebsd10':
+        twoGB = 2*GiB-1
+    else:
+        twoGB = 2*GiB
+    for maxsize in [GiB, twoGB]:
+##    for maxsize in [0.005*GiB]:
+        for idx,bench_func in enumerate(bench_funcs):
+            _callback, stmt, setup, params = bench_func(tmpdir, maxsize)
+            callback = func if _callback is None else _callback
+            _df = pd.DataFrame()
+            df = update(df, ps.run(_df, lambda p: callback(p, stmt, setup), params))
+            ps.df_json_write(df, 'save_{}_up_to_{}_{}.json'.format(idx,
+                                                                   bench_func.__name__, 
+                                                                   size2str(maxsize)))
+    backup(results)	
+    ps.df_json_write(df, results)
