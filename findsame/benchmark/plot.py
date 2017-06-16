@@ -37,13 +37,13 @@ def plot(study, df, xprop, yprop, cprop=None, plot='plot'):
         ax.set_xticklabels(xticklabels, rotation=rotation)
         ax.set_xlabel(xprop)
         ax.set_ylabel(ylabel)
-        ax.set_title(study)
         fig.subplots_adjust(bottom=0.2)
         ax.legend(title=cprop.replace('_str',''))
         os.makedirs('pics', exist_ok=True)
         tmp = np.unique(df.maxsize_str.values)
         assert len(tmp) == 1
         maxsize_str = tmp[0]
+        ax.set_title('{} maxsize={}'.format(study, maxsize_str))
         savefig(fig, '{}_{}'.format(study, maxsize_str))
 
 
@@ -68,23 +68,30 @@ if __name__ == '__main__':
         plot('main_parallel', df, 'nworkers', 'timing', 'pool_type')
         plot('hash_file_parallel', df, 'nworkers', 'timing', 'pool_type')
         
-        # call this last since it modifies `df` globally
         study = 'main_parallel_2d'
+        title = '{} maxsize={}'.format(study, maxsize_str)
         if study in df.study.values:
-            df = df[df['study'] == study]
-            xx = df.nprocs.values
-            yy = df.nthreads.values
-            zz = df.timing.values
+            fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
+            df2d = df[df['study'] == study]
+            xx = df2d.nprocs.values
+            yy = df2d.nthreads.values
+            zz = df2d.timing.values
             x = np.unique(xx)
             y = np.unique(yy)
             X,Y = np.meshgrid(x, y, indexing='ij');
             Z = zz.reshape((len(x),len(y))).T
-            fig, ax = plt.subplots(subplot_kw=dict(projection='3d'))
+            min_idx = np.unravel_index(np.argmin(Z), Z.shape)
+            xmin = X[min_idx]
+            ymin = Y[min_idx]
+            zmin = Z[min_idx]
+            ax.plot([xmin], [ymin], [zmin], 'ro', ms=5)
             ax.set_xlabel('procs')
             ax.set_ylabel('threads') 
             ax.set_zlabel('timing (s)')
+            ax.view_init(20,60)
             ax.plot_wireframe(X,Y,Z)
             ax.scatter(xx, yy, zz)
+            ax.set_title(title)
             savefig(fig, '{}_{}'.format(study, maxsize_str))
 
     plt.show()
