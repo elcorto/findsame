@@ -27,29 +27,29 @@ def hash_file_subprocess(fn):
 def test_dict_equal():
     aa = {'a':1, 'b': {'b': 2}}
     bb = {'a':1, 'b': {'b': 2}}
-    assert co.dict_equal(aa, bb) 
+    assert co.dict_equal(aa, bb)
     aa = {'a':1, 'b': {'b': 2}, 'c': [1,2,3]}
     bb = {'a':1, 'b': {'b': 2}, 'c': [1,2,3]}
-    assert co.dict_equal(aa, bb) 
-    
+    assert co.dict_equal(aa, bb)
+
     aa = {'a':1, 'b': {'b': 2}}
     bb = {'a':1, 'b': {'b': 3}}
-    assert not co.dict_equal(aa, bb) 
-    assert not co.dict_equal(bb, aa) 
+    assert not co.dict_equal(aa, bb)
+    assert not co.dict_equal(bb, aa)
     aa = {'a':1, 'b': {'b': 2}, 'c': [1,2,3]}
     bb = {'a':1, 'b': {'b': 2}, 'c': [3,2,1]}
-    assert not co.dict_equal(aa, bb) 
-    assert not co.dict_equal(bb, aa) 
+    assert not co.dict_equal(aa, bb)
+    assert not co.dict_equal(bb, aa)
 
     aa = {'a':1, 'b': {'b': 2}, 'c': [1,2,3]}
     bb = {'a':1, 'b': {'b': 2}}
-    assert not co.dict_equal(aa, bb) 
-    assert not co.dict_equal(bb, aa) 
+    assert not co.dict_equal(aa, bb)
+    assert not co.dict_equal(bb, aa)
 
     aa = {'b': {'b': 2}}
     bb = {'a':1, 'b': {'b': 2}}
-    assert not co.dict_equal(aa, bb) 
-    assert not co.dict_equal(bb, aa) 
+    assert not co.dict_equal(aa, bb)
+    assert not co.dict_equal(bb, aa)
 
 
 def test_hash():
@@ -70,7 +70,7 @@ def test_exe_stdout():
             exe = '{here}/../../bin/fs.py {opts}'.format(here=here, opts=opts)
             for args in ['data', 'data/*']:
                 cmd = '{exe} {here}/{args} 2>&1 | grep -v SKIP'.format(exe=exe, args=args,
-                                                   here=here)
+                                                                       here=here)
                 print(cmd)
                 out = subprocess.check_output(cmd, shell=True)
                 out = out.decode()
@@ -78,7 +78,7 @@ def test_exe_stdout():
                 print(out)
                 ref_fn = '{here}/ref_output_{fmt}'.format(here=here, fmt=fmt)
                 val, ref, comp = preproc_func(out, ref_fn)
-                assert comp(val, ref), "val:\n{}\nref:\n{}".format(val, ref) 
+                assert comp(val, ref), "val:\n{}\nref:\n{}".format(val, ref)
 
 def test_size_str():
     sizes = [1023, random.randint(1000, 300000000000)]

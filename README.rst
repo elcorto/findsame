@@ -48,52 +48,53 @@ The output format is json::
 Use `jq <https://stedolan.github.io/jq>`_ for pretty-printing. Example using
 the test suite data::
 
-	$ ./fs.py test/data | jq .
-	{
-	  "0a96c2e755258bd46abdde729f8ee97d234dd04e": {
-		"file": [
-		  "test/data/lena.png",
-		  "test/data/lena_copy.png"
-		]
-	  },
-	  "312382290f4f71e7fb7f00449fb529fce3b8ec95": {
-		"file": [
-		  "test/data/file1",
-		  "test/data/file1_copy"
-		]
-	  },
-	  "55341fe74a3497b53438f9b724b3e8cdaf728edc": {
-		"dir": [
-		  "test/data/dir1",
-		  "test/data/dir1_copy"
-		]
-	  },
-	  "da39a3ee5e6b4b0d3255bfef95601890afd80709": {
-		"file:empty": [
-		  "test/data/dir2/empty_dir/empty_file",
-		  "test/data/dir2/empty_dir_copy/empty_file",
-		  "test/data/empty_dir/empty_file",
-		  "test/data/empty_dir_copy/empty_file",
-		  "test/data/empty_file",
-		  "test/data/empty_file_copy"
-		],
-		"dir:empty": [
-		  "test/data/dir2/empty_dir",
-		  "test/data/dir2/empty_dir_copy",
-		  "test/data/empty_dir",
-		  "test/data/empty_dir_copy"
-		]
-	  },
-	  "9619a9b308cdebee40f6cef018fef0f4d0de2939": {
-		"file": [
-		  "test/data/dir1/file2",
-		  "test/data/dir1/file2_copy",
-		  "test/data/dir1_copy/file2",
-		  "test/data/dir1_copy/file2_copy",
-		  "test/data/file2"
-		]
-	  }
-	}
+    $ cd findsame/tests
+    $ fs.py data | jq .
+    {
+      "0a96c2e755258bd46abdde729f8ee97d234dd04e": {
+        "file": [
+          "data/lena.png",
+          "data/lena_copy.png"
+        ]
+      },
+      "312382290f4f71e7fb7f00449fb529fce3b8ec95": {
+        "file": [
+          "data/file1",
+          "data/file1_copy"
+        ]
+      },
+      "55341fe74a3497b53438f9b724b3e8cdaf728edc": {
+        "dir": [
+          "data/dir1",
+          "data/dir1_copy"
+        ]
+      },
+      "da39a3ee5e6b4b0d3255bfef95601890afd80709": {
+        "file:empty": [
+          "data/dir2/empty_dir/empty_file",
+          "data/dir2/empty_dir_copy/empty_file",
+          "data/empty_dir/empty_file",
+          "data/empty_dir_copy/empty_file",
+          "data/empty_file",
+          "data/empty_file_copy"
+        ],
+        "dir:empty": [
+          "data/dir2/empty_dir",
+          "data/dir2/empty_dir_copy",
+          "data/empty_dir",
+          "data/empty_dir_copy"
+        ]
+      },
+      "9619a9b308cdebee40f6cef018fef0f4d0de2939": {
+        "file": [
+          "data/dir1/file2",
+          "data/dir1/file2_copy",
+          "data/dir1_copy/file2",
+          "data/dir1_copy/file2_copy",
+          "data/file2"
+        ]
+      }
+    }
 
 
 Note that the order of key-value entries in the output from both
@@ -104,97 +105,97 @@ Python, ...).
 
 A common task is to find only groups of equal dirs::
 
-	$ ./fs.py test/data | jq '.[]|select(.dir)|.dir'
-	[
-	  "test/data/dir1",
-	  "test/data/dir1_copy"
-	]
+    $ fs.py data | jq '.[]|select(.dir)|.dir'
+    [
+      "data/dir1",
+      "data/dir1_copy"
+    ]
 
 Or only the files::
 
-	$ ./fs.py test/data | jq '.[]|select(.file)|.file'
-	[
-	  "test/data/dir1/file2",
-	  "test/data/dir1/file2_copy",
-	  "test/data/dir1_copy/file2",
-	  "test/data/dir1_copy/file2_copy",
-	  "test/data/file2"
-	]
-	[
-	  "test/data/lena.png",
-	  "test/data/lena_copy.png"
-	]
-	[
-	  "test/data/file1",
-	  "test/data/file1_copy"
-	]
+    $ fs.py data | jq '.[]|select(.file)|.file'
+    [
+      "data/dir1/file2",
+      "data/dir1/file2_copy",
+      "data/dir1_copy/file2",
+      "data/dir1_copy/file2_copy",
+      "data/file2"
+    ]
+    [
+      "data/lena.png",
+      "data/lena_copy.png"
+    ]
+    [
+      "data/file1",
+      "data/file1_copy"
+    ]
 
 Another task is to find the first or *all but* the first elements in a group of
 same-hash files/dirs.
 
 Find first element::
 
-	$ ./fs.py test/data | jq '.[]|.[]|[.[0]]'
-	[
-	  "test/data/lena.png"
-	]
-	[
-	  "test/data/dir2/empty_dir"
-	]
-	[
-	  "test/data/dir2/empty_dir/empty_file"
-	]
-	[
-	  "test/data/dir1/file2"
-	]
-	[
-	  "test/data/file1"
-	]
-	[
-	  "test/data/dir1"
-	]
+    $ fs.py data | jq '.[]|.[]|[.[0]]'
+    [
+      "data/lena.png"
+    ]
+    [
+      "data/dir2/empty_dir"
+    ]
+    [
+      "data/dir2/empty_dir/empty_file"
+    ]
+    [
+      "data/dir1/file2"
+    ]
+    [
+      "data/file1"
+    ]
+    [
+      "data/dir1"
+    ]
 
 or w/o the length-1 list::
 
-	$ ./fs.py test/data | jq '.[]|.[]|.[0]'
-	"test/data/dir2/empty_dir"
-	"test/data/dir2/empty_dir/empty_file"
-	"test/data/dir1/file2"
-	"test/data/lena.png"
-	"test/data/file1"
-	"test/data/dir1"
+    $ fs.py data | jq '.[]|.[]|.[0]'
+    "data/dir2/empty_dir"
+    "data/dir2/empty_dir/empty_file"
+    "data/dir1/file2"
+    "data/lena.png"
+    "data/file1"
+    "data/dir1"
 
 
 All but first::
 
-	$ ./fs.py test/data | jq '.[]|.[]|.[1:]'
-	[
-	  "test/data/dir1_copy"
-	]
-	[
-	  "test/data/lena_copy.png"
-	]
-	[
-	  "test/data/dir1/file2_copy",
-	  "test/data/dir1_copy/file2",
-	  "test/data/dir1_copy/file2_copy",
-	  "test/data/file2"
-	]
-	[
-	  "test/data/dir2/empty_dir_copy/empty_file",
-	  "test/data/empty_dir/empty_file",
-	  "test/data/empty_dir_copy/empty_file",
-	  "test/data/empty_file",
-	  "test/data/empty_file_copy"
-	]
-	[
-	  "test/data/dir2/empty_dir_copy",
-	  "test/data/empty_dir",
-	  "test/data/empty_dir_copy"
-	]
-	[
-	  "test/data/file1_copy"
-	]
+    $ fs.py data | jq '.[]|.[]|.[1:]'
+    [
+      "data/dir1_copy"
+    ]
+    [
+      "data/lena_copy.png"
+    ]
+    [
+      "data/dir1/file2_copy",
+      "data/dir1_copy/file2",
+      "data/dir1_copy/file2_copy",
+      "data/file2"
+    ]
+    [
+      "data/dir2/empty_dir_copy/empty_file",
+      "data/empty_dir/empty_file",
+      "data/empty_dir_copy/empty_file",
+      "data/empty_file",
+      "data/empty_file_copy"
+    ]
+    [
+      "data/dir2/empty_dir_copy",
+      "data/empty_dir",
+      "data/empty_dir_copy"
+    ]
+    [
+      "data/file1_copy"
+    ]
 
 
 tests
@@ -212,24 +213,33 @@ and/or processes for hash calculations on your machine::
     $ ./plot.py
 
 This writes test files of various size to ``benchmark/files`` and runs a couple
-of benchmarks. Tune ``maxsize`` in ``benchmark.py`` to have faster tests.
+of benchmarks (runtime ~30 min for all benchmarks). Tune ``maxsize`` in
+``benchmark.py`` to have faster tests or disable some benchmark functions.
 
 Bottom line:
 
-* blocksizes around 256 KiB (``--blocksize 256K``) work best for all file
-  sizes, even though the variation to worst timings is at most factor 1.25
-  (e.g. 1 vs. 1.25 seconds)
-* multithreading (``-t/--nthreads``): up to 2x speedup on
-  dual-core box -- very efficient, use NTHREADS = number of cores (problem is
-  largely IO-bound)
-* multiprocessing (``-p/--nprocs``): less efficient speedup
+* blocksizes below 512 KiB (``--blocksize 512K``) work best for all file sizes
+  on most systems, even though the variation to worst timings is at most factor
+  1.25 (e.g. 1 vs. 1.25 seconds)
+* multithreading (``-t/--nthreads``): up to 2x speedup on dual-core box -- very
+  efficient, use NTHREADS = number of cores for good baseline performance
+  (problem is mostly IO-bound) 
+* multiprocessing (``-p/--nprocs``): less efficient speedup, but on some
+  systems NPROCS + NTHREADS is even a bit faster than NTHREADS alone, testing
+  is mandatory 
 * we have a linear increase of runtime with filesize, of course
 
 Tested systems:
 
 * Lenovo E330, Samsung 840 Evo SSD, Core i3-3120M (2 cores, 2 threads / core)
 * Lenovo X230, Samsung 840 Evo SSD, Core i5-3210M (2 cores, 2 threads / core)
-* FreeBSD, ZFS mirror, Intel Celeron J3160 (4 cores, 1 thread / core)
+    * best blocksizes = 256K
+    * speedups: NPROCS=2: 1.5, NTHREADS=2..3: 1.9, 
+      no gain when using NPROCS+NTHREADS
+* FreeNAS 9.10, ZFS mirror WD Red WD40EFRX, Intel Celeron J3160
+  (4 cores, 1 thread / core)
+    * best blocksizes = 80K
+    * speedups: NPROCS=3..4: 2.1..2.2, NTHREADS=4..6: 2.6..2.7, NPROCS=3..4,NTHREADS=4: 3
 
 other tools
 -----------
