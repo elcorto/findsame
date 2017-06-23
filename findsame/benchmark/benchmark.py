@@ -6,7 +6,7 @@ from tempfile import mkdtemp
 import pandas as pd
 import numpy as np
 
-from findsame import parallel as pl 
+from findsame import parallel as pl
 from psweep import psweep as ps
 from itertools import product
 from findsame.common import KiB, MiB, GiB, size2str
@@ -107,7 +107,7 @@ def bench_main_blocksize_filesize(tmpdir, maxsize):
     setup = "from findsame import main"
     stmt = """main.main({files_dirs}, blocksize={blocksize})"""
     params = []
-    
+
     # single files, test filesize and blocksize
     max_filesize = maxsize
     max_blocksize = min(200*MiB, max_filesize)
@@ -132,9 +132,9 @@ def bench_main_blocksize_filesize(tmpdir, maxsize):
                             ps.seq2dicts('blocksize_str', map(size2str,
                                                            blocksize))))
         params += this
-    
+
     study = 'main_blocksize'
-    testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir, 
+    testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir,
                                                   study=study)
     blocksize = bytes_logspace(10*KiB, min(200*MiB, maxsize), 20)
     this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
@@ -153,9 +153,9 @@ def bench_main_parallel(tmpdir, maxsize):
     stmt = """main.main({files_dirs}, blocksize={blocksize},
                         nthreads={nthreads}, nprocs={nprocs})"""
     params = []
-    
+
     study = 'main_parallel'
-    testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir, 
+    testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir,
                                                   study=study)
     blocksize = np.array([256*KiB])
     this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
@@ -169,7 +169,7 @@ def bench_main_parallel(tmpdir, maxsize):
                         ps.seq2dicts('blocksize_str', list(map(size2str,
                                                             blocksize)))))
     params += this
-    
+
     this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
                     ps.seq2dicts('study', [study]),
                     zip(ps.seq2dicts('nprocs', range(1,9)),
@@ -190,9 +190,9 @@ def bench_main_parallel_2d(tmpdir, maxsize):
                         nthreads={nthreads}, nprocs={nprocs})"""
 
     params = []
-    
+
     study = 'main_parallel_2d'
-    testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir, 
+    testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir,
                                                   study=study)
     blocksize = np.array([256*KiB])
     this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
@@ -215,16 +215,16 @@ def bench_hash_file_parallel(tmpdir, maxsize):
     params = []
 
     study = 'hash_file_parallel'
-    testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir, 
+    testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir,
                                                   study=study)
-   
+
     pool_map = {'seq': pl.SequentialPoolExecutor,
                 'thread': pl.ThreadPoolExecutor,
                 'proc': pl.ProcessPoolExecutor,
                 'proc,thread=1': lambda nw: pl.ProcessAndThreadPoolExecutor(nw, 1),
                 'thread,proc=1': lambda nw: pl.ProcessAndThreadPoolExecutor(1, nw),
                 }
-    
+
     def func(dct, stmt=None, setup='pass'):
         ctx = dict(pool_map=pool_map,
                    pl=pl,
@@ -238,12 +238,13 @@ def bench_hash_file_parallel(tmpdir, maxsize):
                                globals=ctx)
         return {'timing': min(timing)}
 
+    setup = 'pass'
     stmt = """
 with pool_map['{pool_type}']({nworkers}) as pool:
     x=list(pool.map(worker, files))
     """
 
-    this = mkparams(ps.seq2dicts('pool_type', 
+    this = mkparams(ps.seq2dicts('pool_type',
                               [k for k in pool_map.keys() if k != 'seq']),
                     ps.seq2dicts('nworkers', range(1,9)),
                     ps.seq2dicts('study', [study]),
@@ -251,7 +252,7 @@ with pool_map['{pool_type}']({nworkers}) as pool:
                     )
     params += this
     # non-pool reference
-    params += [{'study': study, 'pool_type': 'seq', 'nworkers': 1, 
+    params += [{'study': study, 'pool_type': 'seq', 'nworkers': 1,
                 'maxsize_str': size2str(maxsize)}]
 
     return func, stmt, setup, params
@@ -266,7 +267,7 @@ def backup(src, prefix='.'):
     """Backup (copy) `src` to <src><prefix><num>, where <num> is an integer
     starting at 0 which is incremented until there is no destination with that
     name.
-    
+
     Symlinks are handled by shutil.copy() for files and shutil.copytree() for
     dirs. In both cases, the content of the file/dir pointed to by the link is
     copied.
@@ -323,7 +324,7 @@ if __name__ == '__main__':
             _df = pd.DataFrame()
             df = update(df, ps.run(_df, lambda p: callback(p, stmt, setup), params))
             ps.df_json_write(df, 'save_{}_up_to_{}_{}.json'.format(idx,
-                                                                   bench_func.__name__, 
+                                                                   bench_func.__name__,
                                                                    size2str(maxsize)))
-    backup(results)	
+    backup(results)
     ps.df_json_write(df, results)
