@@ -11,8 +11,8 @@ usage
 
 ::
 
-    $ ./bin/fs.py -h
-    usage: fs.py [-h] [-b BLOCKSIZE] [-p NPROCS] [-t NTHREADS]
+    $ ./bin/findsame -h
+    usage: findsame [-h] [-b BLOCKSIZE] [-p NPROCS] [-t NTHREADS]
                  file/dir [file/dir ...]
 
     Find same files and dirs based on file hashes.
@@ -49,7 +49,7 @@ Use `jq <https://stedolan.github.io/jq>`_ for pretty-printing. Example using
 the test suite data::
 
     $ cd findsame/tests
-    $ fs.py data | jq .
+    $ findsame data | jq .
     {
       "0a96c2e755258bd46abdde729f8ee97d234dd04e": {
         "file": [
@@ -98,14 +98,14 @@ the test suite data::
 
 
 Note that the order of key-value entries in the output from both
-``fs.py`` and ``jq`` is random.
+``findsame`` and ``jq`` is random.
 
 Post-processing is only limited by your ability to process json (using ``jq``,
 Python, ...).
 
 A common task is to find only groups of equal dirs::
 
-    $ fs.py data | jq '.[]|select(.dir)|.dir'
+    $ findsame data | jq '.[]|select(.dir)|.dir'
     [
       "data/dir1",
       "data/dir1_copy"
@@ -113,7 +113,7 @@ A common task is to find only groups of equal dirs::
 
 Or only the files::
 
-    $ fs.py data | jq '.[]|select(.file)|.file'
+    $ findsame data | jq '.[]|select(.file)|.file'
     [
       "data/dir1/file2",
       "data/dir1/file2_copy",
@@ -135,7 +135,7 @@ same-hash files/dirs.
 
 Find first element::
 
-    $ fs.py data | jq '.[]|.[]|[.[0]]'
+    $ findsame data | jq '.[]|.[]|[.[0]]'
     [
       "data/lena.png"
     ]
@@ -157,7 +157,7 @@ Find first element::
 
 or w/o the length-1 list::
 
-    $ fs.py data | jq '.[]|.[]|.[0]'
+    $ findsame data | jq '.[]|.[]|.[0]'
     "data/dir2/empty_dir"
     "data/dir2/empty_dir/empty_file"
     "data/dir1/file2"
@@ -168,7 +168,7 @@ or w/o the length-1 list::
 
 All but first::
 
-    $ fs.py data | jq '.[]|.[]|.[1:]'
+    $ findsame data | jq '.[]|.[]|.[1:]'
     [
       "data/dir1_copy"
     ]

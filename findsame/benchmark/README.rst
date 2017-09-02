@@ -1,8 +1,8 @@
-Simplified benchmark of the bottleneck: findsame.lib.calc.hash_file(). How do
+Simplified benchmark of the bottleneck: findsame.calc.hash_file(). How do
 we know? To get an idea of the overall code performance, we use the pprofile
-line profiler and run fs.py with nworkers=1 (default)::
+line profiler and run findsame with nworkers=1 (default)::
 
-    $ pprofile3 ./fs.py ...
+    $ pprofile3 ./findsame ...
     38|     34080|     0.155238|  4.55511e-06|  0.15%|def hash_file(fn, blocksize=BLOCKSIZE):
     ....................
     58|     34079|     0.268784|  7.88709e-06|  0.26%|    hasher = hashlib.sha1()
