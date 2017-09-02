@@ -25,16 +25,14 @@ process overhead.
 
 On the other hand, it is "well known" that one can fight I/O-bound problems
 with threads. Indeed, we see a speedup of 1.5..1.6, which is a bit more than
-1.33. Our test system is a Core i3 or Core i5 which has 2 threads per core. Since
-threading in Python is still bound to one interpreter process by the GIL, it is
-unclear where the speedup actually comes from. The behavior is the same on a
-system with 1 thread per core (i.e. no Intel Hyperthreading).
+1.33. Our test system is a Core i3 or Core i5 which has 2 threads per core.
+Since threading in Python is still bound to one interpreter process by the GIL,
+it is unclear where the speedup actually comes from. Rumor has it that threads
+waiting for IO do actualy release the GIL. The behavior is the same on a system
+with 1 thread per core (i.e. no Intel Hyperthreading).
 
 We know from benchmark.py that we actually get a 2-fold *slowdown* with
 processes, when benchmarking the whole application (benchmark.bench_main).
 However on the toy problem here, which is to use only the presumed hot spot
 hash_file() in bench_parallel(), we get the *same* speedUP as with
 ThreadPoolExecutor. Lesson: always benchmark with real-world data.
-
-TODO: Find out why hash_file() is fast with ProcessPoolExecutor, while the
-whole app is slow with it.

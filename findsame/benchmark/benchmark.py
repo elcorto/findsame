@@ -54,8 +54,8 @@ def write_single_files(testdir, sizes):
 def write_file_groups(testdir, sizes, group_size=None):
     """For each file size (bytes) in `sizes`, write a group of ``nfiles`` files
     ``{testdir}/filesize_{size}/file_{idx}; idx=0...nfiles-1``, such that each
-    dir ``filesize_{size}`` has approimately ``group_size``. If `group_size` is
-    ommitted, then use ``group_size=max(size)`` such that the the group with
+    dir ``filesize_{size}`` has approximately ``group_size``. If `group_size` is
+    omitted, then use ``group_size=max(size)`` such that the the group with
     the largest file ``size`` has only one file. Returns lists of group dirs
     and file names."""
     if group_size is None:
@@ -85,13 +85,23 @@ def write_file_groups(testdir, sizes, group_size=None):
 
 
 def write_collection(collection_size=GiB, tmpdir=None, study=None, ngroups=10):
+    """Special-purpose version of write_file_groups().
+    
+    Write a collection of ``ngroups`` file groups, such that the whole
+    collection has approximately ``collection_size``. Each group has equal
+    group size of ``collection_size/ngroups`` and an automatically determined
+    file size, such that groups with a small file size have many files, while
+    groups with large file size have few files.
+
+    This is used to create a syntetic real-wold-like file distribution on a
+    system with many small and few large files.
+    """
     filesize = bytes_logspace(128*KiB, collection_size/ngroups,
                               ngroups)
     testdir = mkdtemp(dir=tmpdir, prefix=study)
     group_dirs, files = write_file_groups(testdir, filesize,
                                           int(collection_size/ngroups))
     return testdir, group_dirs, files
-
 
 
 def func(dct, stmt=None, setup=None):
@@ -124,13 +134,13 @@ def bench_main_blocksize_filesize(tmpdir, maxsize):
         files = write_single_files(testdir, filesize)
         this = mkparams(zip(ps.seq2dicts('filesize', filesize),
                             ps.seq2dicts('filesize_str', map(size2str,
-                                                          filesize)),
+                                                             filesize)),
                             ps.seq2dicts('files_dirs', [[x] for x in files])),
                         ps.seq2dicts('study', [study]),
                         ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
                         zip(ps.seq2dicts('blocksize', blocksize),
                             ps.seq2dicts('blocksize_str', map(size2str,
-                                                           blocksize))))
+                                                              blocksize))))
         params += this
 
     study = 'main_blocksize'
@@ -298,6 +308,8 @@ def backup(src, prefix='.'):
 
 
 if __name__ == '__main__':
+    # usage:
+    #   ./this.py [old_results.json]
     tmpdir = './files'
     results = './results.json'
     os.makedirs(tmpdir, exist_ok=True)

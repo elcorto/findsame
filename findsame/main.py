@@ -3,6 +3,15 @@ from findsame import common as co
 from findsame import calc
 
 def main(files_dirs, nprocs=1, nthreads=1, blocksize=None):
+    """
+    Parameters
+    ----------
+    files_dirs : seq
+        list of strings w/ files and/or dirs
+    nprocs : int
+    nthreads : int
+    blocksize : int
+    """
     file_hashes = dict()
     dir_hashes = dict()
     for path in files_dirs:
@@ -16,20 +25,32 @@ def main(files_dirs, nprocs=1, nthreads=1, blocksize=None):
             dir_hashes.update(tree.dir_hashes)
         else:
             co.debug_msg("SKIP: {}".format(path))
-
+    
+    # file_hashes, dir_hashes:
+    #   {path1: hashA,
+    #    path2: hashA,
+    #    path3: hashB,
+    #    ...}
+    #
+    # file_store, dir_store:
+    #    hashA: [path1, path2],
+    #    hashB: [path3],
+    #    ...}
     file_store = co.invert_dict(file_hashes)
     dir_store = co.invert_dict(dir_hashes)
 
     # result:
-    #     {hashA: {typX: [path1, path2],
-    #              typY: [path3]},
-    #      hashB: {typX: [...]},
-    #      ...}
+    #   {hashA: {typX: [path1, path2],
+    #            typY: [path3]},
+    #    hashB: {typX: [...]},
+    #    ...}
     result = dict()
     empty = calc.hashsum('')
-    for kind, dct in [('dir', dir_store), ('file', file_store)]:
-        for hsh, paths in dct.items():
+    for kind, store in [('dir', dir_store), ('file', file_store)]:
+        for hsh, paths in store.items():
             hsh_dct = result.get(hsh, {})
+            # exclude single items, only multiple hashes for now (hence the
+            # name find*same* :)
             if len(paths) > 1:
                 # exclude single deep files, where each upper dir has the same
                 # hash as the deep file

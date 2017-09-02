@@ -197,6 +197,29 @@ All but first::
       "data/file1_copy"
     ]
 
+And w/o lists::
+
+    $ findsame data | jq '.[]|.[]|.[1:]|.[]'
+    "data/file1_copy"
+    "data/dir1/file2_copy"
+    "data/dir1_copy/file2"
+    "data/dir1_copy/file2_copy"
+    "data/file2"
+    "data/lena_copy.png"
+    "data/dir2/empty_dir_copy/empty_file"
+    "data/empty_dir/empty_file"
+    "data/empty_dir_copy/empty_file"
+    "data/empty_file"
+    "data/empty_file_copy"
+    "data/dir2/empty_dir_copy"
+    "data/empty_dir"
+    "data/empty_dir_copy"
+    "data/dir1_copy"
+
+The last one can be used, for example, to delete all but the first in a group
+of equal files/dirs, e.g.::
+
+    $ findsame data | jq '.[]|.[]|.[1:]|.[]' | xargs cp -rvt duplicates/ 
 
 tests
 -----
