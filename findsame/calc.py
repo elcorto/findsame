@@ -155,11 +155,13 @@ class Leaf(Element):
 
 class MerkleTree:
     def __init__(self, dr, calc=True, nprocs=1, nthreads=1,
-                 blocksize=BLOCKSIZE):
+                 blocksize=BLOCKSIZE, share_leafs=True):
         self.nprocs = nprocs
         self.nthreads = nthreads
         self.blocksize = blocksize
         self.dr = dr
+        # only for benchmarks and debugging
+        self.share_leafs = share_leafs
         assert os.path.exists(self.dr) and os.path.isdir(self.dr)
         self.build_tree()
         if calc:
@@ -244,7 +246,7 @@ class MerkleTree:
         # *partially* populated w/ hashes anyway, gets deleted. Then, the
         # dir_hashes calculation below triggers a new hash calculation for the
         # entire tree, such that we have exactly doubled the run time!
-        if useproc:
+        if useproc and self.share_leafs:
             for leaf in self.leafs.values():
                 if not leaf.has_hash:
                     leaf.hash = self.file_hashes[leaf.name]

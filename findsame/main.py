@@ -2,7 +2,7 @@ import functools, os
 from findsame import common as co
 from findsame import calc
 
-def main(files_dirs, nprocs=1, nthreads=1, blocksize=None):
+def main(files_dirs, nprocs=1, nthreads=1, blocksize=None, share_leafs=True):
     """
     Parameters
     ----------
@@ -11,6 +11,7 @@ def main(files_dirs, nprocs=1, nthreads=1, blocksize=None):
     nprocs : int
     nthreads : int
     blocksize : int
+    share_leafs : bool
     """
     file_hashes = dict()
     dir_hashes = dict()
@@ -20,7 +21,8 @@ def main(files_dirs, nprocs=1, nthreads=1, blocksize=None):
             file_hashes[path] = calc.hash_file(path, blocksize)
         elif os.path.isdir(path):
             tree = calc.MerkleTree(path, calc=True, nprocs=nprocs,
-                                   nthreads=nthreads, blocksize=blocksize)
+                                   nthreads=nthreads, blocksize=blocksize,
+                                   share_leafs=share_leafs)
             file_hashes.update(tree.file_hashes)
             dir_hashes.update(tree.dir_hashes)
         else:
