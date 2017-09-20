@@ -60,7 +60,7 @@ class ProcessAndThreadPoolExecutor(Executor):
             #     or pending.
             # Looks like we need to force a wait for the completion of the
             # evaluation of thread_pool.map().
-            return iter(list((thread_pool.map(self.thread_worker, subseq))))
+            return iter(list(thread_pool.map(self.thread_worker, subseq)))
     
     def map(self, thread_worker, seq, **kwds):
         # Cannot define process_worker inside map():
