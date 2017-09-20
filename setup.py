@@ -23,6 +23,7 @@ install_requires = []
 
 req = [('matplotlib', 'matplotlib', None, None),
        ('nose', 'nose', None, None),
+       ('pandas', 'pandas', None, None),
        ('numpy', 'numpy', None, None),
        ('psweep', 'psweep', None, None),
        ]
@@ -40,6 +41,7 @@ for pipname,pkgname,op,ver in req:
     except ImportError:
         install_requires.append(req)
 
+print("install_requires: {}".format(install_requires))
 
 setup(
     name='findsame',
