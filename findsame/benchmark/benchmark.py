@@ -54,8 +54,8 @@ def write_single_files(testdir, sizes):
 def write_file_groups(testdir, sizes, group_size=None):
     """For each file size (bytes) in `sizes`, write a group of ``nfiles`` files
     ``{testdir}/filesize_{size}/file_{idx}; idx=0...nfiles-1``, such that each
-    dir ``filesize_{size}`` has approximately ``group_size``. If `group_size` is
-    omitted, then use ``group_size=max(size)`` such that the the group with
+    dir ``filesize_{size}`` has approximately ``group_size``. If `group_size`
+    is omitted, then use ``group_size=max(size)`` such that the the group with
     the largest file ``size`` has only one file. Returns lists of group dirs
     and file names."""
     if group_size is None:
@@ -127,7 +127,7 @@ def bench_main_blocksize_filesize(tmpdir, maxsize):
              (bytes_linspace(10*MiB, max_filesize, 5),
               np.array([256*KiB]),
               'main_filesize_single'),
-              ]
+                ]
 
     for filesize, blocksize, study in cases:
         testdir = mkdtemp(dir=tmpdir, prefix=study)
@@ -152,10 +152,9 @@ def bench_main_blocksize_filesize(tmpdir, maxsize):
                     ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
                     zip(ps.seq2dicts('blocksize', blocksize),
                         ps.seq2dicts('blocksize_str', map(size2str,
-                                                       blocksize))))
+                                                          blocksize))))
     params += this
     return None, stmt, setup, params
-
 
 
 def bench_main_parallel(tmpdir, maxsize):
@@ -169,12 +168,12 @@ def bench_main_parallel(tmpdir, maxsize):
     testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir,
                                                   study=study)
     blocksize = np.array([256*KiB])
-    
+
     for share_leafs in [True, False]:
         this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
                         ps.seq2dicts('study', [study]),
-                        zip(ps.seq2dicts('nthreads', range(1,MAXWORKERS+1)),
-                            ps.seq2dicts('nworkers', range(1,MAXWORKERS+1))),
+                        zip(ps.seq2dicts('nthreads', range(1, MAXWORKERS+1)),
+                            ps.seq2dicts('nworkers', range(1, MAXWORKERS+1))),
                         ps.seq2dicts('nprocs', [1]),
                         ps.seq2dicts('pool_type', ['thread']),
                         ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
@@ -186,15 +185,15 @@ def bench_main_parallel(tmpdir, maxsize):
 
         this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
                         ps.seq2dicts('study', [study]),
-                        zip(ps.seq2dicts('nprocs', range(1,MAXWORKERS+1)),
-                            ps.seq2dicts('nworkers', range(1,MAXWORKERS+1))),
+                        zip(ps.seq2dicts('nprocs', range(1, MAXWORKERS+1)),
+                            ps.seq2dicts('nworkers', range(1, MAXWORKERS+1))),
                         ps.seq2dicts('nthreads', [1]),
                         ps.seq2dicts('pool_type', ['proc']),
                         ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
                         ps.seq2dicts('share_leafs', [share_leafs]),
                         zip(ps.seq2dicts('blocksize', blocksize),
                             ps.seq2dicts('blocksize_str', list(map(size2str,
-                                                                blocksize)))))
+                                                                   blocksize)))))
         params += this
     return None, stmt, setup, params
 
@@ -212,12 +211,12 @@ def bench_main_parallel_2d(tmpdir, maxsize):
     blocksize = np.array([256*KiB])
     this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
                     ps.seq2dicts('study', [study]),
-                    ps.seq2dicts('nthreads', range(1,MAXWORKERS+1)),
-                    ps.seq2dicts('nprocs', range(1,MAXWORKERS+1)),
+                    ps.seq2dicts('nthreads', range(1, MAXWORKERS+1)),
+                    ps.seq2dicts('nprocs', range(1, MAXWORKERS+1)),
                     ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
                     zip(ps.seq2dicts('blocksize', blocksize),
                         ps.seq2dicts('blocksize_str', list(map(size2str,
-                                                            blocksize)))))
+                                                               blocksize)))))
     params += this
     return None, stmt, setup, params
 
@@ -261,7 +260,7 @@ with pool_map['{pool_type}']({nworkers}) as pool:
 
     this = mkparams(ps.seq2dicts('pool_type',
                                  [k for k in pool_map.keys() if k != 'seq']),
-                    ps.seq2dicts('nworkers', range(1,MAXWORKERS+1)),
+                    ps.seq2dicts('nworkers', range(1, MAXWORKERS+1)),
                     ps.seq2dicts('study', [study]),
                     ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
                     )
@@ -299,21 +298,21 @@ def backup(src, prefix='.'):
         elif os.path.isdir(src):
             copy = shutil.copytree
         else:
-            raise Exception("source '%s' is not file or dir" %src)
+            raise Exception("source '%s' is not file or dir" % src)
         idx = 0
-        dst = src + '%s%s' %(prefix,idx)
+        dst = src + '%s%s' % (prefix,idx)
         while os.path.exists(dst):
             idx += 1
-            dst = src + '%s%s' %(prefix,idx)
+            dst = src + '%s%s' % (prefix,idx)
         # sanity check
         if os.path.exists(dst):
-            raise Exception("destination '%s' exists" %dst)
+            raise Exception("destination '%s' exists" % dst)
         else:
             copy(src, dst)
 
 
 if __name__ == '__main__':
-    MAXWORKERS = 8
+    MAXWORKERS = 6
     # usage:
     #   ./this.py [old_results.json]
     tmpdir = './files'
@@ -334,11 +333,11 @@ if __name__ == '__main__':
         twoGB = 2*GiB-1
     else:
         twoGB = 2*GiB
-##    for maxsize in [100*MiB]:
+##    for maxsize in [50*MiB]:
     for maxsize in [GiB]:
 ##    for maxsize in [GiB, twoGB]:
 ##    for maxsize in [0.005*GiB]:
-        for idx,bench_func in enumerate(bench_funcs):
+        for idx, bench_func in enumerate(bench_funcs):
             _callback, stmt, setup, params = bench_func(tmpdir, maxsize)
             callback = func if _callback is None else _callback
             _df = pd.DataFrame()
