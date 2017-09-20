@@ -220,7 +220,7 @@ class MerkleTree:
             # same as 
             #   self.file_hashes = dict((k,v.hash) for k,v in self.leafs.items())
             # just looks nicer :)
-            getpool = lambda: SequentialPoolExecutor()
+            getpool = SequentialPoolExecutor
         elif self.nthreads == 1:
             assert self.nprocs > 1
             getpool = lambda: ProcessPoolExecutor(self.nprocs)
