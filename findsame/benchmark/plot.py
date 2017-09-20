@@ -1,27 +1,43 @@
 #!/usr/bin/env python3
 
-import os, sys
+import os, sys, collections, itertools, functools
 import pandas as pd
+from psweep import psweep as ps
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 
+def to_seq(arg):
+    if isinstance(arg, collections.Sequence) and not isinstance(arg, str):
+        return arg
+    else:
+        return [arg]
 
 def plot(study, df, xprop, yprop, cprop=None, plot='plot'):
+    cprop = to_seq(cprop) if cprop is not None else None
     if study in df.study.values:
         df = df.sort_values(xprop)
         df = df[df['study'] == study]
         if cprop is None:
-            cprop = 'study'
-            const_itr = [study]
+            cprop = ['study']
+            const_itr = [{'study': study}]
         else:
-            const_itr = df[cprop].unique()
+            # cprop = ['pool_type', 'share_leafs']
+            # const_vals = [('thread', True), ('thread', False), ('proc', True), ('proc', False)]
+            # const_itr =
+            #   [{'pool_type': 'thread', 'share_leafs': True},
+            #    {'pool_type': 'thread', 'share_leafs': False},
+            #    {'pool_type': 'proc', 'share_leafs': True},
+            #    {'pool_type': 'proc', 'share_leafs': False}]
+            const_vals = itertools.product(*(df[c].unique() for c in cprop))
+            const_itr = (dict(zip(cprop, cv)) for cv in const_vals)
         fig,ax = plt.subplots()
         xticks = []
         xticklabels = []
-        for const in const_itr:
-            msk = df[cprop] == const
-            label = df[msk][cprop].values[0]
+        for const_dct in const_itr:
+            msk = functools.reduce(np.logical_and, 
+                                   ((df[kk]==vv) for kk,vv in const_dct.items()))
+            label = ','.join("{}={}".format(kk,vv) for kk,vv in const_dct.items())
             x = df[msk][xprop]
             y = df[msk][yprop]
             getattr(ax, plot)(x, y, 'o-', label=label)
@@ -38,7 +54,7 @@ def plot(study, df, xprop, yprop, cprop=None, plot='plot'):
         ax.set_xlabel(xprop)
         ax.set_ylabel(ylabel)
         fig.subplots_adjust(bottom=0.2)
-        ax.legend(title=cprop.replace('_str',''))
+        ax.legend()
         os.makedirs('pics', exist_ok=True)
         tmp = np.unique(df.maxsize_str.values)
         assert len(tmp) == 1
@@ -58,14 +74,16 @@ if __name__ == '__main__':
         results = sys.argv[1]
     else:
         results = 'results.json'
-    dfall = pd.io.json.read_json(results, orient='split')
+    dfall = ps.df_json_read(results)
+    if 'share_leafs' in dfall.columns:
+        dfall.share_leafs = dfall.share_leafs.astype(bool)
     for maxsize_str in np.unique(dfall.maxsize_str.values):
         df = dfall[dfall.maxsize_str == maxsize_str]
         plot('main_blocksize_single', df, 'blocksize', 'timing', 'filesize_str', plot='semilogx')
         plot('main_filesize_single', df, 'filesize', 'timing', 'blocksize_str')
         plot('main_blocksize', df, 'blocksize', 'timing', plot='semilogx')
 
-        plot('main_parallel', df, 'nworkers', 'timing', 'pool_type')
+        plot('main_parallel', df, 'nworkers', 'timing', ['pool_type', 'share_leafs'])
         plot('hash_file_parallel', df, 'nworkers', 'timing', 'pool_type')
 
         study = 'main_parallel_2d'
