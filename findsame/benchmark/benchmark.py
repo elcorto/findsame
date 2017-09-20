@@ -173,8 +173,8 @@ def bench_main_parallel(tmpdir, maxsize):
     for share_leafs in [True, False]:
         this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
                         ps.seq2dicts('study', [study]),
-                        zip(ps.seq2dicts('nthreads', range(1,9)),
-                            ps.seq2dicts('nworkers', range(1,9))),
+                        zip(ps.seq2dicts('nthreads', range(1,MAXWORKERS+1)),
+                            ps.seq2dicts('nworkers', range(1,MAXWORKERS+1))),
                         ps.seq2dicts('nprocs', [1]),
                         ps.seq2dicts('pool_type', ['thread']),
                         ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
@@ -186,8 +186,8 @@ def bench_main_parallel(tmpdir, maxsize):
 
         this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
                         ps.seq2dicts('study', [study]),
-                        zip(ps.seq2dicts('nprocs', range(1,9)),
-                            ps.seq2dicts('nworkers', range(1,9))),
+                        zip(ps.seq2dicts('nprocs', range(1,MAXWORKERS+1)),
+                            ps.seq2dicts('nworkers', range(1,MAXWORKERS+1))),
                         ps.seq2dicts('nthreads', [1]),
                         ps.seq2dicts('pool_type', ['proc']),
                         ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
@@ -212,8 +212,8 @@ def bench_main_parallel_2d(tmpdir, maxsize):
     blocksize = np.array([256*KiB])
     this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
                     ps.seq2dicts('study', [study]),
-                    ps.seq2dicts('nthreads', range(1,9)),
-                    ps.seq2dicts('nprocs', range(1,9)),
+                    ps.seq2dicts('nthreads', range(1,MAXWORKERS+1)),
+                    ps.seq2dicts('nprocs', range(1,MAXWORKERS+1)),
                     ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
                     zip(ps.seq2dicts('blocksize', blocksize),
                         ps.seq2dicts('blocksize_str', list(map(size2str,
@@ -260,8 +260,8 @@ with pool_map['{pool_type}']({nworkers}) as pool:
     """
 
     this = mkparams(ps.seq2dicts('pool_type',
-                              [k for k in pool_map.keys() if k != 'seq']),
-                    ps.seq2dicts('nworkers', range(1,9)),
+                                 [k for k in pool_map.keys() if k != 'seq']),
+                    ps.seq2dicts('nworkers', range(1,MAXWORKERS+1)),
                     ps.seq2dicts('study', [study]),
                     ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
                     )
@@ -313,6 +313,7 @@ def backup(src, prefix='.'):
 
 
 if __name__ == '__main__':
+    MAXWORKERS = 8
     # usage:
     #   ./this.py [old_results.json]
     tmpdir = './files'
@@ -333,7 +334,9 @@ if __name__ == '__main__':
         twoGB = 2*GiB-1
     else:
         twoGB = 2*GiB
-    for maxsize in [GiB, twoGB]:
+##    for maxsize in [100*MiB]:
+    for maxsize in [GiB]:
+##    for maxsize in [GiB, twoGB]:
 ##    for maxsize in [0.005*GiB]:
         for idx,bench_func in enumerate(bench_funcs):
             _callback, stmt, setup, params = bench_func(tmpdir, maxsize)
