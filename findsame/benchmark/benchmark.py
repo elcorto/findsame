@@ -161,36 +161,41 @@ def bench_main_blocksize_filesize(tmpdir, maxsize):
 def bench_main_parallel(tmpdir, maxsize):
     setup = "from findsame import main"
     stmt = """main.main({files_dirs}, blocksize={blocksize},
-                        nthreads={nthreads}, nprocs={nprocs})"""
+                        nthreads={nthreads}, nprocs={nprocs},
+                        share_leafs={share_leafs})"""
     params = []
 
     study = 'main_parallel'
     testdir, group_dirs, files = write_collection(maxsize, tmpdir=tmpdir,
                                                   study=study)
     blocksize = np.array([256*KiB])
-    this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
-                    ps.seq2dicts('study', [study]),
-                    zip(ps.seq2dicts('nthreads', range(1,9)),
-                        ps.seq2dicts('nworkers', range(1,9))),
-                    ps.seq2dicts('nprocs', [1]),
-                    ps.seq2dicts('pool_type', ['thread']),
-                    ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
-                    zip(ps.seq2dicts('blocksize', blocksize),
-                        ps.seq2dicts('blocksize_str', list(map(size2str,
-                                                            blocksize)))))
-    params += this
+    
+    for share_leafs in [True, False]:
+        this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
+                        ps.seq2dicts('study', [study]),
+                        zip(ps.seq2dicts('nthreads', range(1,9)),
+                            ps.seq2dicts('nworkers', range(1,9))),
+                        ps.seq2dicts('nprocs', [1]),
+                        ps.seq2dicts('pool_type', ['thread']),
+                        ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
+                        ps.seq2dicts('share_leafs', [share_leafs]),
+                        zip(ps.seq2dicts('blocksize', blocksize),
+                            ps.seq2dicts('blocksize_str', list(map(size2str,
+                                                                blocksize)))))
+        params += this
 
-    this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
-                    ps.seq2dicts('study', [study]),
-                    zip(ps.seq2dicts('nprocs', range(1,9)),
-                        ps.seq2dicts('nworkers', range(1,9))),
-                    ps.seq2dicts('nthreads', [1]),
-                    ps.seq2dicts('pool_type', ['proc']),
-                    ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
-                    zip(ps.seq2dicts('blocksize', blocksize),
-                        ps.seq2dicts('blocksize_str', list(map(size2str,
-                                                            blocksize)))))
-    params += this
+        this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
+                        ps.seq2dicts('study', [study]),
+                        zip(ps.seq2dicts('nprocs', range(1,9)),
+                            ps.seq2dicts('nworkers', range(1,9))),
+                        ps.seq2dicts('nthreads', [1]),
+                        ps.seq2dicts('pool_type', ['proc']),
+                        ps.seq2dicts('maxsize_str', [size2str(maxsize)]),
+                        ps.seq2dicts('share_leafs', [share_leafs]),
+                        zip(ps.seq2dicts('blocksize', blocksize),
+                            ps.seq2dicts('blocksize_str', list(map(size2str,
+                                                                blocksize)))))
+        params += this
     return None, stmt, setup, params
 
 
