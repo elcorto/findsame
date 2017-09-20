@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os, sys, collections, itertools, functools
-import pandas as pd
 from psweep import psweep as ps
 from matplotlib import pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -13,31 +12,31 @@ def to_seq(arg):
     else:
         return [arg]
 
-def plot(study, df, xprop, yprop, cprop=None, plot='plot'):
-    cprop = to_seq(cprop) if cprop is not None else None
+def plot(study, df, xprop, yprop, const_prop=None, plot='plot'):
+    const_prop = to_seq(const_prop) if const_prop is not None else None
     if study in df.study.values:
         df = df.sort_values(xprop)
         df = df[df['study'] == study]
-        if cprop is None:
-            cprop = ['study']
-            const_itr = [{'study': study}]
+        if const_prop is None:
+            const_prop = ['study']
+            const_params = [{'study': study}]
         else:
-            # cprop = ['pool_type', 'share_leafs']
+            # const_prop = ['pool_type', 'share_leafs']
             # const_vals = [('thread', True), ('thread', False), ('proc', True), ('proc', False)]
-            # const_itr =
+            # const_params =
             #   [{'pool_type': 'thread', 'share_leafs': True},
             #    {'pool_type': 'thread', 'share_leafs': False},
             #    {'pool_type': 'proc', 'share_leafs': True},
             #    {'pool_type': 'proc', 'share_leafs': False}]
-            const_vals = itertools.product(*(df[c].unique() for c in cprop))
-            const_itr = (dict(zip(cprop, cv)) for cv in const_vals)
+            const_vals = itertools.product(*(df[c].unique() for c in const_prop))
+            const_params = (dict(zip(const_prop, cv)) for cv in const_vals)
         fig,ax = plt.subplots()
         xticks = []
         xticklabels = []
-        for const_dct in const_itr:
+        for const_pset in const_params:
             msk = functools.reduce(np.logical_and, 
-                                   ((df[kk]==vv) for kk,vv in const_dct.items()))
-            label = ','.join("{}={}".format(kk,vv) for kk,vv in const_dct.items())
+                                   ((df[kk]==vv) for kk,vv in const_pset.items()))
+            label = ','.join("{}={}".format(kk,vv) for kk,vv in const_pset.items())
             x = df[msk][xprop]
             y = df[msk][yprop]
             getattr(ax, plot)(x, y, 'o-', label=label)
