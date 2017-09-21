@@ -84,7 +84,7 @@ def write_file_groups(testdir, sizes, group_size=None):
     return group_dirs, files
 
 
-def write_collection(collection_size=GiB, tmpdir=None, study=None, ngroups=10):
+def write_collection(collection_size=GiB, min_size=128*KiB, tmpdir=None, study=None, ngroups=10):
     """Special-purpose version of write_file_groups().
     
     Write a collection of ``ngroups`` file groups, such that the whole
@@ -96,7 +96,7 @@ def write_collection(collection_size=GiB, tmpdir=None, study=None, ngroups=10):
     This is used to create a syntetic real-wold-like file distribution on a
     system with many small and few large files.
     """
-    filesize = bytes_logspace(128*KiB, collection_size/ngroups,
+    filesize = bytes_logspace(min_size, collection_size/ngroups,
                               ngroups)
     testdir = mkdtemp(dir=tmpdir, prefix=study)
     group_dirs, files = write_file_groups(testdir, filesize,
