@@ -236,7 +236,7 @@ and/or processes for hash calculations on your machine::
     $ ./plot.py
 
 This writes test files of various size to ``benchmark/files`` and runs a couple
-of benchmarks (runtime ~30 min for all benchmarks). Tune ``maxsize`` in
+of benchmarks (runtime ~10 min for all benchmarks). Tune ``maxsize`` in
 ``benchmark.py`` to have faster tests or disable some benchmark functions.
 
 Bottom line:
@@ -259,7 +259,7 @@ Tested systems:
     * best blocksizes = 256K
     * speedups: NPROCS=2: 1.5, NTHREADS=2..3: 1.9, 
       no gain when using NPROCS+NTHREADS
-* FreeNAS 9.10, ZFS mirror WD Red WD40EFRX, Intel Celeron J3160
+* FreeNAS 11 (FreeBSD 11.0), ZFS mirror WD Red WD40EFRX, Intel Celeron J3160
   (4 cores, 1 thread / core)
     * best blocksizes = 80K
     * speedups: NPROCS=3..4: 2.1..2.2, NTHREADS=4..6: 2.6..2.7, NPROCS=3..4,NTHREADS=4: 3
