@@ -98,6 +98,7 @@ def split_path(path):
 
 class Element:
     def __init__(self, name='noname'):
+        self.kind = None
         self.name = name
         self.has_hash = False
 
@@ -118,6 +119,7 @@ class Element:
 class Node(Element):
     def __init__(self, *args, childs=None, **kwds):
         super(Node, self).__init__(*args, **kwds)
+        self.kind = 'node'
         self.childs = childs
 
     def add_child(self, child):
@@ -146,6 +148,7 @@ class Node(Element):
 class Leaf(Element):
     def __init__(self, *args, fn=None, blocksize=BLOCKSIZE, **kwds):
         super(Leaf, self).__init__(*args, **kwds)
+        self.kind = 'leaf'
         self.fn = fn
         self.blocksize = blocksize
 
