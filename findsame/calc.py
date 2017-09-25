@@ -100,7 +100,6 @@ class Element:
     def __init__(self, name='noname'):
         self.kind = None
         self.name = name
-        self.has_hash = False
 
     def __repr__(self):
         return "{}:{}".format(self.kind, self.name)
@@ -109,7 +108,6 @@ class Element:
     def hash(self):
         if VERBOSE:
             co.debug_msg("hash: {}".format(self.name))
-        self.has_hash = True
         return self._get_hash()
 
     def _get_hash(self):
@@ -244,14 +242,19 @@ class MerkleTree:
         # ProcessPoolExecutor if we do not assign calculated leaf hashes
         # beforehand. This is b/c we do not operate on self.file_hashes, which
         # WAS calculated fast in parallel, but on MerkleTree. MerkleTree is NOT
-        # shared between processes. Therefore, when we leave the pool context,
-        # the in-memory MerkleTree object of each process, which is only
-        # *partially* populated w/ hashes anyway, gets deleted. Then, the
-        # dir_hashes calculation below triggers a new hash calculation for the
-        # entire tree, such that we have exactly doubled the run time!
+        # shared between processes. multiprocessing spawns N new processes, ech
+        # with it's own MerkleTree object, and each will calculate
+        # approximately len(leafs)/N hashes, which are then collected in
+        # file_hashes. Therefore, when we leave the pool context, the
+        # MerkleTree objects of each sub-process are deleted, while the main
+        # process MerkleTree object is still empty! Then, the dir_hashes
+        # calculation below triggers a new hash calculation for the entire tree
+        # of the main process all over again. We work around that by setting
+        # leaf.hash by hand. Since the main process' MerkleTree is empty, we
+        # don't need to test if leaf.hash is already populated (for that, we'd
+        # need to extend the lazyprop decorator anyway).
         if useproc and self.share_leafs:
             for leaf in self.leafs.values():
-                if not leaf.has_hash:
-                    leaf.hash = self.file_hashes[leaf.name]
+                leaf.hash = self.file_hashes[leaf.name]
         
         self.dir_hashes = dict((k,v.hash) for k,v in self.nodes.items())
