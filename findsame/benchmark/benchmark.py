@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import timeit, os, sys, shutil
+import timeit, os, sys, shutil, os
 from tempfile import mkdtemp
 
 import pandas as pd
@@ -84,7 +84,8 @@ def write_file_groups(testdir, sizes, group_size=None):
     return group_dirs, files
 
 
-def write_collection(collection_size=GiB, min_size=128*KiB, tmpdir=None, study=None, ngroups=10):
+def write_collection(collection_size=GiB, min_size=128*KiB, tmpdir=None,
+                     study=None, ngroups=100):
     """Special-purpose version of write_file_groups().
     
     Write a collection of ``ngroups`` file groups, such that the whole
@@ -96,11 +97,13 @@ def write_collection(collection_size=GiB, min_size=128*KiB, tmpdir=None, study=N
     This is used to create a syntetic real-wold-like file distribution on a
     system with many small and few large files.
     """
-    filesize = bytes_logspace(min_size, collection_size/ngroups,
-                              ngroups)
+    group_size = int(collection_size/ngroups)
+    assert group_size > 0
+    filesize = bytes_logspace(min_size,group_size, ngroups)
+    os.makedirs(tmpdir, exist_ok=True)
     testdir = mkdtemp(dir=tmpdir, prefix=study)
     group_dirs, files = write_file_groups(testdir, filesize,
-                                          int(collection_size/ngroups))
+                                          group_size)
     return testdir, group_dirs, files
 
 
