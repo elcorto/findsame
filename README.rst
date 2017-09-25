@@ -256,11 +256,14 @@ Tested systems:
 
 * Lenovo E330, Samsung 840 Evo SSD, Core i3-3120M (2 cores, 2 threads / core)
 * Lenovo X230, Samsung 840 Evo SSD, Core i5-3210M (2 cores, 2 threads / core)
+
     * best blocksizes = 256K
     * speedups: NPROCS=2: 1.5, NTHREADS=2..3: 1.9, 
       no gain when using NPROCS+NTHREADS
+
 * FreeNAS 11 (FreeBSD 11.0), ZFS mirror WD Red WD40EFRX, Intel Celeron J3160
   (4 cores, 1 thread / core)
+
     * best blocksizes = 80K
     * speedups: NPROCS=3..4: 2.1..2.2, NTHREADS=4..6: 2.6..2.7, NPROCS=3..4,NTHREADS=4: 3
 
