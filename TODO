@@ -24,3 +24,6 @@ a json, we should store the results in pickled a dict or smth and add
 postprocessing sub-commands (similar to what we do in
 https://github.com/elcorto/unfish).)
 
+stdout/stderr
+-------------
+Use logging module.
