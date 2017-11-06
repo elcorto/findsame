@@ -51,7 +51,7 @@ setup(
     url='https://github.com/elcorto/findsame',
     author='Steve Schmerler',
     author_email='git@elcorto.com',
-    license='GPLv3',
+    license='BSD 3-Clause',
     keywords='same files directories merkle tree hash',
     packages=find_packages(),
     install_requires=install_requires,
