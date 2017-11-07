@@ -12,27 +12,23 @@ bindir = 'bin'
 with open(os.path.join(here, 'README.rst')) as fd:
     long_description = fd.read()
 
-# Hack to make pip respect system packages. So sad! Why in the world can pip
-# list and uninstall system packages (Debian: /usr/lib/python3/dist-packages),
-# but NOT respect them when installing!!!?? It completely ignores existing
-# packages, even with correct versions, and happily re-installs them from
-# it's own sources (of course to other locations). Then we end up with two
-# installations of the SAME package in the SAME version -- thank you very much.
-# I don't get it, seriously.
+# Hack to make pip respect system packages. 
 install_requires = []
 
-req = [('matplotlib', 'matplotlib', None, None),
-       ('nose', 'nose', None, None),
-       ('pandas', 'pandas', None, None),
-       ('numpy', 'numpy', None, None),
-       ('psweep', 'psweep', None, None),
-       ]
+# (pip name, import name, operator, version)
+# ('numpy', 'numpy', '>', '1.0')
+reqs = [('matplotlib', 'matplotlib', None, None),
+        ('nose', 'nose', None, None),
+        ('pandas', 'pandas', None, None),
+        ('numpy', 'numpy', None, None),
+        ('psweep', 'psweep', None, None),
+        ]
 
-for pipname,pkgname,op,ver in req:
-    print("checking dependency: {}".format(pkgname))
-    req = pipname + op + ver if op and ver else pipname
+for pip_name,import_name,op,ver in reqs:
+    print("checking dependency: {}".format(import_name))
+    req = pip_name + op + ver if op and ver else pip_name
     try:
-        pkg = importlib.import_module(pkgname)
+        pkg = importlib.import_module(import_name)
         if op and ver:
             cmd = "Version(pkg.__version__) {op} Version('{ver}')".format(op=op,
                                                                           ver=ver)
