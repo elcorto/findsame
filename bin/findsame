@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse, json
+from multiprocessing import cpu_count
 from findsame import common as co
 from findsame import calc, main
 
@@ -18,10 +19,10 @@ if __name__ == '__main__':
                              '[%(default)s]')
     parser.add_argument('-p', '--nprocs', 
                         default=1, type=int,
-                        help='number of parallel processes')
+                        help='number of parallel processes [%(default)s]')
     parser.add_argument('-t', '--nthreads', 
-                        default=1, type=int,
-                        help='threads per process')
+                        default=cpu_count(), type=int,
+                        help='threads per process [%(default)s]')
     args = parser.parse_args()
     print(json.dumps(main.main(files_dirs=args.files_dirs,
                                nprocs=args.nprocs,
