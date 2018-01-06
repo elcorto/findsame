@@ -82,6 +82,5 @@ def test_exe_stdout():
 
 def test_size_str():
     sizes = [1023, random.randint(1000, 300000000000)]
-    for sep in ['', ' ', '___']:
-        for size in sizes:
-            assert co.str2size(co.size2str(size, prec=30)) == size
+    for size in sizes:
+        assert co.str2size(co.size2str(size, prec=30)) == size
