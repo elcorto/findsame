@@ -34,22 +34,22 @@ def str2size(st, sep=''):
 
 
 def invert_dict(dct):
-    """Given a dict with paths and hashes, "invert" the dict to find all paths
-    which have the same hash.
+    """Given a dict with paths and fprs, "invert" the dict to find all paths
+    which have the same fpr.
 
     Parameters
     ----------
     dct: dict
-        {path1: hashA,
-         path2: hashA,
-         path3: hashB,
+        {path1: fprA,
+         path2: fprA,
+         path3: fprB,
          ...}
 
     Returns
     -------
     dict
-        {hashA: [path1, path2],
-         hashB: [path3],
+        {fprA: [path1, path2],
+         fprB: [path3],
          ...}
     """
     store = dict()

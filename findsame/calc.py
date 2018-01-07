@@ -107,12 +107,12 @@ class Element:
         return "{}:{}".format(self.kind, self.name)
     
     @co.lazyprop
-    def hash(self):
+    def fpr(self):
         if VERBOSE:
-            co.debug_msg("hash: {}".format(self.name))
-        return self._get_hash()
+            co.debug_msg("fpr: {}".format(self.name))
+        return self._get_fpr()
 
-    def _get_hash(self):
+    def _get_fpr(self):
         raise NotImplementedError
 
 
@@ -126,14 +126,14 @@ class Node(Element):
         self.childs.append(child)
 
     @staticmethod
-    def _merge_hash(hash_lst):
-        """Hash of a list of hash strings. Sort them first to ensure reproducible
+    def _merge_fpr(fpr_lst):
+        """Hash of a list of fpr strings. Sort them first to ensure reproducible
         results."""
-        nn = len(hash_lst)
+        nn = len(fpr_lst)
         if nn > 1:
-            return hashsum(''.join(sorted(hash_lst)))
+            return hashsum(''.join(sorted(fpr_lst)))
         elif nn == 1:
-            return hash_lst[0]
+            return fpr_lst[0]
         # no childs, this happen if
         # * we really have a node (=dir) w/o childs
         # * we have only links in the dir .. we currently treat
@@ -141,19 +141,22 @@ class Node(Element):
         else:
             return hashsum('')
 
-    def _get_hash(self):
-        return self._merge_hash([c.hash for c in self.childs])
+    def _get_fpr(self):
+        # XXX reallt need that list here, what about genexpr?
+        return self._merge_fpr([c.fpr for c in self.childs])
 
 
 class Leaf(Element):
-    def __init__(self, *args, fn=None, blocksize=config.blocksize, **kwds):
+    def __init__(self, *args, fn=None, blocksize=config.blocksize,
+                 fpr_func=hash_file, **kwds):
         super(Leaf, self).__init__(*args, **kwds)
         self.kind = 'leaf'
         self.fn = fn
         self.blocksize = blocksize
+        self.fpr_func = fpr_func
 
-    def _get_hash(self):
-        return hash_file(self.fn, blocksize=self.blocksize)
+    def _get_fpr(self):
+        return self.fpr_func(self.fn, blocksize=self.blocksize)
 
 
 class MerkleTree:
@@ -167,11 +170,11 @@ class MerkleTree:
         assert os.path.exists(self.dr) and os.path.isdir(self.dr)
         self.build_tree()
         if calc:
-            self.calc_hashes()
+            self.calc_fprs()
 
     def build_tree(self):
         """Construct Merkle tree from all dirs and files in directory
-        `self.dr`. Don't calculate hashes.
+        `self.dr`. Don't calculate fprs.
         """
         nodes = {}
         leafs = {}
@@ -206,21 +209,21 @@ class MerkleTree:
             self.nodes = nodes
             self.leafs = leafs
     
-    # pool.map(lambda kv: (k, v.hash), ...) in calc_hashes() doesn't work,
+    # pool.map(lambda kv: (k, v.fpr), ...) in calc_fprs() doesn't work,
     # error is "Can't pickle ... lambda ...", same with defining _worker()
-    # inside calc_hashes(), need to def it in outer scope
+    # inside calc_fprs(), need to def it in outer scope
     @staticmethod
     def _worker(kv):
-        return kv[0], kv[1].hash
+        return kv[0], kv[1].fpr
     
     # XXX maybe add special-case code to ProcessAndThreadPoolExecutor
-    def calc_hashes(self):
+    def calc_fprs(self):
         useproc = False
-        """Trigger recursive hash calculation."""
+        """Trigger recursive fpr calculation."""
         # leafs can be calculated in parallel since there are no dependencies
         if self.nthreads == 1 and self.nprocs == 1:
             # same as 
-            #   self.file_hashes = dict((k,v.hash) for k,v in self.leafs.items())
+            #   self.file_fprs = dict((k,v.fpr) for k,v in self.leafs.items())
             # just looks nicer :)
             getpool = SequentialPoolExecutor
         elif self.nthreads == 1:
@@ -235,27 +238,27 @@ class MerkleTree:
                                                            nthreads=self.nthreads)
             useproc = True
         with getpool() as pool: 
-            self.file_hashes = dict(pool.map(self._worker, 
+            self.file_fprs = dict(pool.map(self._worker, 
                                              self.leafs.items(),
                                              chunksize=1))
         
-        # The dir_hashes calculation below causes a slowdown with
-        # ProcessPoolExecutor if we do not assign calculated leaf hashes
-        # beforehand. This is b/c we do not operate on self.file_hashes, which
+        # The dir_fprs calculation below causes a slowdown with
+        # ProcessPoolExecutor if we do not assign calculated leaf fprs
+        # beforehand. This is b/c we do not operate on self.file_fprs, which
         # WAS calculated fast in parallel, but on MerkleTree. MerkleTree is NOT
         # shared between processes. multiprocessing spawns N new processes, ech
         # with it's own MerkleTree object, and each will calculate
-        # approximately len(leafs)/N hashes, which are then collected in
-        # file_hashes. Therefore, when we leave the pool context, the
+        # approximately len(leafs)/N fprs, which are then collected in
+        # file_fprs. Therefore, when we leave the pool context, the
         # MerkleTree objects of each sub-process are deleted, while the main
-        # process MerkleTree object is still empty! Then, the dir_hashes
-        # calculation below triggers a new hash calculation for the entire tree
+        # process MerkleTree object is still empty! Then, the dir_fprs
+        # calculation below triggers a new fpr calculation for the entire tree
         # of the main process all over again. We work around that by setting
-        # leaf.hash by hand. Since the main process' MerkleTree is empty, we
-        # don't need to test if leaf.hash is already populated (for that, we'd
+        # leaf.fpr by hand. Since the main process' MerkleTree is empty, we
+        # don't need to test if leaf.fpr is already populated (for that, we'd
         # need to extend the lazyprop decorator anyway).
         if useproc and self.share_leafs:
             for leaf in self.leafs.values():
-                leaf.hash = self.file_hashes[leaf.name]
+                leaf.fpr = self.file_fprs[leaf.name]
         
-        self.dir_hashes = dict((k,v.hash) for k,v in self.nodes.items())
+        self.dir_fprs = dict((k,v.fpr) for k,v in self.nodes.items())
