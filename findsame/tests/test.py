@@ -52,10 +52,17 @@ def test_dict_equal():
     assert not co.dict_equal(bb, aa)
 
 
-def test_hash():
+def test_hash_file():
     fn = pj(os.path.dirname(__file__), 'data/lena.png')
     assert calc.hash_file(fn) == hash_file_subprocess(fn)
 
+def test_hash_file_limit():
+    fn = pj(os.path.dirname(__file__), 'data/lena.png')
+    ref = hash_file_subprocess(fn)
+    val = calc.hash_file_limit(fn, limit=os.stat(fn).st_size)
+    assert val == ref
+    val = calc.hash_file_limit(fn, limit=os.stat(fn).st_size - 1)
+    assert val != ref
 
 def _preproc_json(val, ref_fn):
     val = json.loads(val)

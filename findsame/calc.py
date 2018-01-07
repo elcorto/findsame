@@ -64,6 +64,19 @@ def hash_file(fn, blocksize=config.blocksize):
     return hasher.hexdigest()
 
 
+def hash_file_limit(fn, blocksize=config.blocksize, limit=None):
+    hasher = HASHFUNC()
+    size = 0
+    with open(fn, 'rb') as fd:
+        buf = fd.read(blocksize)
+        size += len(buf)
+        while buf and size <= limit:
+            hasher.update(buf)
+            buf = fd.read(blocksize)
+            size += len(buf)
+    return hasher.hexdigest()
+
+
 def split_path(path):
     """//foo/bar/baz -> ['foo', 'bar', 'baz']"""
     return [x for x in path.split('/') if x != '']
