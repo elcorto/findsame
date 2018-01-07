@@ -4,14 +4,17 @@ from findsame import calc
 
 
 def calc_fprs(files_dirs, config):
+    file_fpr_func = functools.partial(calc.hash_file,
+                                      blocksize=config.blocksize)
     file_fprs = dict()
     dir_fprs = dict()
     for path in files_dirs:
         # skipping links
         if os.path.isfile(path):
-            file_fprs[path] = calc.hash_file(path, config.blocksize)
+            file_fprs[path] = file_fpr_func(path)
         elif os.path.isdir(path):
-            tree = calc.MerkleTree(path, calc=True, config=config)
+            tree = calc.MerkleTree(path, calc=True, config=config,
+                                   leaf_fpr_func=file_fpr_func)
             file_fprs.update(tree.leaf_fprs)
             dir_fprs.update(tree.node_fprs)
         else:

@@ -160,26 +160,24 @@ class Node(Element):
 
 
 class Leaf(Element):
-    def __init__(self, *args, fn=None, blocksize=config.blocksize,
-                 fpr_func=hash_file, **kwds):
+    def __init__(self, *args, fn=None, fpr_func=hash_file, **kwds):
         super(Leaf, self).__init__(*args, **kwds)
         self.kind = 'leaf'
         self.fn = fn
-        self.blocksize = blocksize
         self.fpr_func = fpr_func
 
     def _get_fpr(self):
-        return self.fpr_func(self.fn, blocksize=self.blocksize)
+        return self.fpr_func(self.fn)
 
 
 class MerkleTree:
-    def __init__(self, dr, calc=True, config=config):
+    def __init__(self, dr, calc=True, config=config, leaf_fpr_func=hash_file):
         self.nprocs = config.nprocs
         self.nthreads = config.nthreads
-        self.blocksize = config.blocksize
         self.dr = dr
         # only for benchmarks and debugging
         self.share_leafs = config.share_leafs
+        self.leaf_fpr_func = leaf_fpr_func
         assert os.path.exists(self.dr) and os.path.isdir(self.dr)
         self.build_tree()
         if calc:
@@ -203,7 +201,7 @@ class MerkleTree:
                     co.debug_msg("build_tree: {}".format(fn))
                 # skipping links
                 if os.path.exists(fn) and os.path.isfile(fn):
-                    leaf = Leaf(name=fn, fn=fn, blocksize=self.blocksize)
+                    leaf = Leaf(name=fn, fn=fn, fpr_func=self.leaf_fpr_func)
                     node.add_child(leaf)
                     leafs[fn] = leaf
                 else:
