@@ -79,22 +79,21 @@ def dict_equal(aa, bb):
     return True
 
 
-class lazyprop(object):
+class lazyprop:
     """Decorator for creating lazy evaluated properties.
     The property should represent non-mutable data, as it replaces itself.
     
     kudos: Cyclone over at stackoverflow!
     http://stackoverflow.com/questions/3012421/python-lazy-property-decorator
     """
-    def __init__(self,fget):
+    def __init__(self, fget):
         self.fget = fget
-        self.func_name = fget.__name__
 
-    def __get__(self,obj,cls):
+    def __get__(self, obj, cls):
         if obj is None:
             return None
         value = self.fget(obj)
-        setattr(obj,self.func_name,value)
+        setattr(obj, self.fget.__name__, value)
         return value
 
 

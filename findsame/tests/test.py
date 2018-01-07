@@ -84,3 +84,28 @@ def test_size_str():
     sizes = [1023, random.randint(1000, 300000000000)]
     for size in sizes:
         assert co.str2size(co.size2str(size, prec=30)) == size
+
+
+def test_lazy():
+    class Foo:
+        def __init__(self):
+            pass
+        
+        def _get_prop(self):
+            return 'prop'
+
+        @co.lazyprop
+        def prop(self):
+            return self._get_prop()
+    
+    foo = Foo()
+    assert foo.prop == 'prop'
+    foo.prop = None
+    assert foo.prop is None
+    # force re-evaluation 
+    del foo.prop
+    assert foo.prop == 'prop'
+    # assign random value, _get_prop() is not called
+    val = 37847128
+    foo.prop = val
+    assert foo.prop == val
