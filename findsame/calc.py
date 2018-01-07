@@ -22,11 +22,11 @@ import os, hashlib, sys
 ##from multiprocessing import Pool # same as ProcessPoolExecutor
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from findsame import common as co
+from findsame.config import config
 from findsame.parallel import ProcessAndThreadPoolExecutor, \
     SequentialPoolExecutor
 
 VERBOSE = False
-BLOCKSIZE = 256*1024
 HASHFUNC = hashlib.sha1
 
 
@@ -35,7 +35,7 @@ def hashsum(x):
     return HASHFUNC(x.encode()).hexdigest()
 
 
-def hash_file(fn, blocksize=BLOCKSIZE):
+def hash_file(fn, blocksize=config.blocksize):
     """Hash file content. Same as::
 
         $ sha1sum <filename>
@@ -146,7 +146,7 @@ class Node(Element):
 
 
 class Leaf(Element):
-    def __init__(self, *args, fn=None, blocksize=BLOCKSIZE, **kwds):
+    def __init__(self, *args, fn=None, blocksize=config.blocksize, **kwds):
         super(Leaf, self).__init__(*args, **kwds)
         self.kind = 'leaf'
         self.fn = fn
@@ -157,14 +157,13 @@ class Leaf(Element):
 
 
 class MerkleTree:
-    def __init__(self, dr, calc=True, nprocs=1, nthreads=1,
-                 blocksize=BLOCKSIZE, share_leafs=True):
-        self.nprocs = nprocs
-        self.nthreads = nthreads
-        self.blocksize = blocksize
+    def __init__(self, dr, calc=True, config=config):
+        self.nprocs = config.nprocs
+        self.nthreads = config.nthreads
+        self.blocksize = config.blocksize
         self.dr = dr
         # only for benchmarks and debugging
-        self.share_leafs = share_leafs
+        self.share_leafs = config.share_leafs
         assert os.path.exists(self.dr) and os.path.isdir(self.dr)
         self.build_tree()
         if calc:

@@ -3,7 +3,8 @@
 import argparse, json
 from multiprocessing import cpu_count
 from findsame import common as co
-from findsame import calc, main
+from findsame import main
+from findsame.config import config
 
 if __name__ == '__main__':
 
@@ -12,7 +13,7 @@ if __name__ == '__main__':
     parser.add_argument('files_dirs', nargs='+', metavar='file/dir',
                         help='files and/or dirs to compare', default=[])
     parser.add_argument('-b', '--blocksize', 
-                        default=co.size2str(calc.BLOCKSIZE),
+                        default=co.size2str(config.blocksize),
                         help='read-in blocksize in hash calculation, '
                              'use units K,M,G as in 100M, 218K or just '
                              '1024 (bytes) '
@@ -24,7 +25,8 @@ if __name__ == '__main__':
                         default=cpu_count(), type=int,
                         help='threads per process [%(default)s]')
     args = parser.parse_args()
-    print(json.dumps(main.main(files_dirs=args.files_dirs,
-                               nprocs=args.nprocs,
-                               nthreads=args.nthreads,
-                               blocksize=co.str2size(args.blocksize))))
+
+    config.nprocs = args.nprocs
+    config.nthreads = args.nthreads
+    config.blocksize = co.str2size(args.blocksize)
+    print(json.dumps(main.main(files_dirs=args.files_dirs, config=config)))

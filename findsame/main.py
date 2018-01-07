@@ -2,27 +2,16 @@ import functools, os
 from findsame import common as co
 from findsame import calc
 
-def main(files_dirs, nprocs=1, nthreads=1, blocksize=None, share_leafs=True):
-    """
-    Parameters
-    ----------
-    files_dirs : seq
-        list of strings w/ files and/or dirs
-    nprocs : int
-    nthreads : int
-    blocksize : int
-    share_leafs : bool
-    """
+
+def calc_hashes(files_dirs, config):
     file_hashes = dict()
     dir_hashes = dict()
     for path in files_dirs:
         # skipping links
         if os.path.isfile(path):
-            file_hashes[path] = calc.hash_file(path, blocksize)
+            file_hashes[path] = calc.hash_file(path, config.blocksize)
         elif os.path.isdir(path):
-            tree = calc.MerkleTree(path, calc=True, nprocs=nprocs,
-                                   nthreads=nthreads, blocksize=blocksize,
-                                   share_leafs=share_leafs)
+            tree = calc.MerkleTree(path, calc=True, config=config)
             file_hashes.update(tree.file_hashes)
             dir_hashes.update(tree.dir_hashes)
         else:
@@ -40,7 +29,10 @@ def main(files_dirs, nprocs=1, nthreads=1, blocksize=None, share_leafs=True):
     #    ...}
     file_store = co.invert_dict(file_hashes)
     dir_store = co.invert_dict(dir_hashes)
+    return file_store, dir_store
 
+
+def assemble_result(file_store, dir_store):
     # result:
     #   {hashA: {typX: [path1, path2],
     #            typY: [path3]},
@@ -77,3 +69,14 @@ def main(files_dirs, nprocs=1, nthreads=1, blocksize=None, share_leafs=True):
                 hsh_dct.update({typ: typ_paths})
                 result.update({hsh: hsh_dct})
     return result
+
+
+def main(files_dirs, config):
+    """
+    Parameters
+    ----------
+    files_dirs : seq
+        list of strings w/ files and/or dirs
+    config : config.Config
+    """
+    return assemble_result(*calc_hashes(files_dirs, config))
