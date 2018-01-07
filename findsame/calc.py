@@ -27,10 +27,12 @@ from findsame.parallel import ProcessAndThreadPoolExecutor, \
 
 VERBOSE = False
 BLOCKSIZE = 256*1024
+HASHFUNC = hashlib.sha1
+
 
 def hashsum(x):
     """SHA1 hash of a string."""
-    return hashlib.sha1(x.encode()).hexdigest()
+    return HASHFUNC(x.encode()).hexdigest()
 
 
 def hash_file(fn, blocksize=BLOCKSIZE):
@@ -53,7 +55,7 @@ def hash_file(fn, blocksize=BLOCKSIZE):
         MiB is fastest, tested on Core i3, hash 500 MiB file, ~ 1s, sha1sum ~
         1.5s
     """
-    hasher = hashlib.sha1()
+    hasher = HASHFUNC()
     with open(fn, 'rb') as fd:
         buf = fd.read(blocksize)
         while buf:
