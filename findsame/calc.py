@@ -142,7 +142,7 @@ class Node(Element):
             return hashsum('')
 
     def _get_fpr(self):
-        # XXX reallt need that list here, what about genexpr?
+        # XXX really need that list here, what about genexpr?
         return self._merge_fpr([c.fpr for c in self.childs])
 
 
@@ -223,7 +223,7 @@ class MerkleTree:
         # leafs can be calculated in parallel since there are no dependencies
         if self.nthreads == 1 and self.nprocs == 1:
             # same as 
-            #   self.file_fprs = dict((k,v.fpr) for k,v in self.leafs.items())
+            #   self.leaf_fprs = dict((k,v.fpr) for k,v in self.leafs.items())
             # just looks nicer :)
             getpool = SequentialPoolExecutor
         elif self.nthreads == 1:
@@ -238,20 +238,20 @@ class MerkleTree:
                                                            nthreads=self.nthreads)
             useproc = True
         with getpool() as pool: 
-            self.file_fprs = dict(pool.map(self._worker, 
-                                             self.leafs.items(),
-                                             chunksize=1))
+            self.leaf_fprs = dict(pool.map(self._worker, 
+                                           self.leafs.items(),
+                                           chunksize=1))
         
-        # The dir_fprs calculation below causes a slowdown with
+        # The node_fprs calculation below causes a slowdown with
         # ProcessPoolExecutor if we do not assign calculated leaf fprs
-        # beforehand. This is b/c we do not operate on self.file_fprs, which
+        # beforehand. This is b/c we do not operate on self.leaf_fprs, which
         # WAS calculated fast in parallel, but on MerkleTree. MerkleTree is NOT
         # shared between processes. multiprocessing spawns N new processes, ech
         # with it's own MerkleTree object, and each will calculate
         # approximately len(leafs)/N fprs, which are then collected in
-        # file_fprs. Therefore, when we leave the pool context, the
+        # leaf_fprs. Therefore, when we leave the pool context, the
         # MerkleTree objects of each sub-process are deleted, while the main
-        # process MerkleTree object is still empty! Then, the dir_fprs
+        # process MerkleTree object is still empty! Then, the node_fprs
         # calculation below triggers a new fpr calculation for the entire tree
         # of the main process all over again. We work around that by setting
         # leaf.fpr by hand. Since the main process' MerkleTree is empty, we
@@ -259,6 +259,10 @@ class MerkleTree:
         # need to extend the lazyprop decorator anyway).
         if useproc and self.share_leafs:
             for leaf in self.leafs.values():
-                leaf.fpr = self.file_fprs[leaf.name]
+                leaf.fpr = self.leaf_fprs[leaf.name]
         
-        self.dir_fprs = dict((k,v.fpr) for k,v in self.nodes.items())
+        # v.fpr attribute access triggers recursive fpr calculation for all
+        # nodes. For only kicking off the calculation, it would be sufficient
+        # to call top.fpr . However, we also put all node fprs in a dict here,
+        # so this is implicit.
+        self.node_fprs = dict((k,v.fpr) for k,v in self.nodes.items())

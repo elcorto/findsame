@@ -12,12 +12,12 @@ def calc_fprs(files_dirs, config):
             file_fprs[path] = calc.hash_file(path, config.blocksize)
         elif os.path.isdir(path):
             tree = calc.MerkleTree(path, calc=True, config=config)
-            file_fprs.update(tree.file_fprs)
-            dir_fprs.update(tree.dir_fprs)
+            file_fprs.update(tree.leaf_fprs)
+            dir_fprs.update(tree.node_fprs)
         else:
             co.debug_msg("SKIP: {}".format(path))
     
-    # file_fprs, dir_fprs:
+    # leaf_fprs, dir_fprs:
     #   {path1: fprA,
     #    path2: fprA,
     #    path3: fprB,
