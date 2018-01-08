@@ -35,7 +35,7 @@ def calc_fprs(files_dirs, config):
     return file_store, dir_store
 
 
-def assemble_result(file_store, dir_store):
+def assemble_result(file_store, dir_store, verbose=False):
     # result:
     #   {fprA: {typX: [path1, path2],
     #            typY: [path3]},
@@ -71,7 +71,10 @@ def assemble_result(file_store, dir_store):
                 typ_paths = hsh_dct.get(typ, []) + paths
                 hsh_dct.update({typ: typ_paths})
                 result.update({hsh: hsh_dct})
-    return result
+    if verbose:
+        return result
+    else:
+        return [dct for dct in result.values()]
 
 
 def main(files_dirs, config):
@@ -82,4 +85,5 @@ def main(files_dirs, config):
         list of strings w/ files and/or dirs
     config : config.Config
     """
-    return assemble_result(*calc_fprs(files_dirs, config))
+    return assemble_result(*calc_fprs(files_dirs, config),
+                           verbose=config.verbose)

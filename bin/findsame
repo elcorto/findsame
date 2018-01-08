@@ -24,9 +24,13 @@ if __name__ == '__main__':
     parser.add_argument('-t', '--nthreads', 
                         default=cpu_count(), type=int,
                         help='threads per process [%(default)s]')
+    parser.add_argument('-v', '--verbose', 
+                        default=False, action='store_true',
+                        help='output actual hashes as well')
     args = parser.parse_args()
 
     config.nprocs = args.nprocs
     config.nthreads = args.nthreads
     config.blocksize = co.str2size(args.blocksize)
+    config.verbose = args.verbose
     print(json.dumps(main.main(files_dirs=args.files_dirs, config=config)))

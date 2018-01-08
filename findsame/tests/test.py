@@ -64,26 +64,38 @@ def test_hash_file_limit():
     val = calc.hash_file_limit(fn, limit=os.stat(fn).st_size - 1)
     assert val != ref
 
-def _preproc_json(val, ref_fn):
+def _preproc_json_verbose(val, ref_fn):
     val = json.loads(val)
     with open(ref_fn) as fd:
         ref = json.load(fd)
     return val, ref, lambda x,y: co.dict_equal(x, y)
 
+def _preproc_json(val, ref_fn):
+    val = json.loads(val)
+    with open(ref_fn) as fd:
+        ref = json.load(fd)
+    return val, ref, lambda x,y: x == y
 
 def test_exe_stdout():
-    for opts in ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K']:
-        for fmt, preproc_func in [('json', _preproc_json)]:
-            exe = '{here}/../../bin/findsame {opts}'.format(here=here, opts=opts)
+    preproc_func = _preproc_json
+    cases = [('json_verbose', '-v', _preproc_json_verbose, ''), 
+             ('json', '', _preproc_json, '| jq sort')]
+    for name, outer_opts, preproc_func, post in cases:
+        for opts in ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K']:
+            exe = '{here}/../../bin/findsame {outer_opts} ' \
+                  '{opts}'.format(here=here, 
+                                  opts=opts,
+                                  outer_opts=outer_opts)
             for args in ['data', 'data/*']:
-                cmd = '{exe} {here}/{args} 2>&1 | grep -v SKIP'.format(exe=exe, args=args,
-                                                                       here=here)
+                cmd = '{exe} {here}/{args} 2>&1 | ' \
+                      'grep -v SKIP {post}'.format(exe=exe, args=args,
+                                                   here=here, post=post)
                 print(cmd)
                 out = subprocess.check_output(cmd, shell=True)
                 out = out.decode()
                 out = out.replace(here + '/','')
                 print(out)
-                ref_fn = '{here}/ref_output_{fmt}'.format(here=here, fmt=fmt)
+                ref_fn = '{here}/ref_output_{name}'.format(here=here, name=name)
                 val, ref, comp = preproc_func(out, ref_fn)
                 assert comp(val, ref), "val:\n{}\nref:\n{}".format(val, ref)
 

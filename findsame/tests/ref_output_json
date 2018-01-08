@@ -1,14 +1,11 @@
-{
-  "9619a9b308cdebee40f6cef018fef0f4d0de2939": {
-    "file": [
-      "data/dir1/file2",
-      "data/dir1/file2_copy",
-      "data/dir1_copy/file2",
-      "data/dir1_copy/file2_copy",
-      "data/file2"
+[
+  {
+    "dir": [
+      "data/dir1",
+      "data/dir1_copy"
     ]
   },
-  "da39a3ee5e6b4b0d3255bfef95601890afd80709": {
+  {
     "dir:empty": [
       "data/dir2/empty_dir",
       "data/dir2/empty_dir_copy",
@@ -24,22 +21,25 @@
       "data/empty_file_copy"
     ]
   },
-  "0a96c2e755258bd46abdde729f8ee97d234dd04e": {
+  {
     "file": [
-      "data/lena.png",
-      "data/lena_copy.png"
+      "data/dir1/file2",
+      "data/dir1/file2_copy",
+      "data/dir1_copy/file2",
+      "data/dir1_copy/file2_copy",
+      "data/file2"
     ]
   },
-  "312382290f4f71e7fb7f00449fb529fce3b8ec95": {
+  {
     "file": [
       "data/file1",
       "data/file1_copy"
     ]
   },
-  "55341fe74a3497b53438f9b724b3e8cdaf728edc": {
-    "dir": [
-      "data/dir1",
-      "data/dir1_copy"
+  {
+    "file": [
+      "data/lena.png",
+      "data/lena_copy.png"
     ]
   }
-}
+]

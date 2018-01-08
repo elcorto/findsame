@@ -6,6 +6,8 @@ Find duplicate files and directories.
 As other tools we use file hashes but additionally, we report duplicate
 directories as well, using a Merkle tree for directory hash calculation.
 
+XXX update verbose
+
 usage
 -----
 
