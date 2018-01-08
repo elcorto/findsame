@@ -10,7 +10,7 @@ def calc_fprs(files_dirs, config):
     dir_fprs = dict()
     for path in files_dirs:
         # skipping links
-        if os.path.isfile(path):
+        if os.path.isfile(path) and not os.path.islink(path):
             file_fprs[path] = file_fpr_func(path)
         elif os.path.isdir(path):
             tree = calc.MerkleTree(path, calc=True, config=config,

@@ -200,7 +200,8 @@ class MerkleTree:
                 if VERBOSE:
                     co.debug_msg("build_tree: {}".format(fn))
                 # skipping links
-                if os.path.exists(fn) and os.path.isfile(fn):
+                if os.path.exists(fn) and os.path.isfile(fn) \
+                        and not os.path.islink(fn):
                     leaf = Leaf(name=fn, fn=fn, fpr_func=self.leaf_fpr_func)
                     node.add_child(leaf)
                     leafs[fn] = leaf
