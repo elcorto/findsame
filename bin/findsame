@@ -18,6 +18,12 @@ if __name__ == '__main__':
                              'use units K,M,G as in 100M, 218K or just '
                              '1024 (bytes) '
                              '[%(default)s]')
+    parser.add_argument('-l', '--limit', 
+                        default=co.size2str(config.limit),
+                        help='read limit (bytes), same units as BLOCKSIZE, '
+                             'calculate hash only for the first LIMIT '
+                             'bytes, makes things go faster for may large files '
+                             '[%(default)s]')
     parser.add_argument('-p', '--nprocs', 
                         default=1, type=int,
                         help='number of parallel processes [%(default)s]')
@@ -32,5 +38,6 @@ if __name__ == '__main__':
     config.nprocs = args.nprocs
     config.nthreads = args.nthreads
     config.blocksize = co.str2size(args.blocksize)
+    config.limit = co.str2size(args.limit)
     config.verbose = args.verbose
     print(json.dumps(main.main(files_dirs=args.files_dirs, config=config)))

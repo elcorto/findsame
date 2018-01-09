@@ -9,6 +9,8 @@ INV_UNITS = dict((vv,kk) for kk,vv in UNITS)
 
 def size2str(filesize, sep='', prec=1):
     """Convert size in bytes to string with unit."""
+    if filesize is None:
+        return 'None'
     for unit, symbol in UNITS:
         if filesize // unit == 0:
             continue
@@ -18,6 +20,8 @@ def size2str(filesize, sep='', prec=1):
 
 
 def str2size(st, sep=''):
+    if st == 'None':
+        return None
     if st[-1] in INV_UNITS.keys():
         if sep == '':
             number = st[:-1]

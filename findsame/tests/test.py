@@ -79,9 +79,15 @@ def _preproc_json(val, ref_fn):
 def test_exe_stdout():
     preproc_func = _preproc_json
     cases = [('json_verbose', '-v', _preproc_json_verbose, ''), 
-             ('json', '', _preproc_json, '| jq sort')]
+             ('json', '', _preproc_json, '| jq sort'),
+             ]
     for name, outer_opts, preproc_func, post in cases:
-        for opts in ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K']:
+        # test all combos only once which are not related to output formatting
+        if name == 'json_verbose':
+            opts_lst = ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K', '-l 128K']
+        else:
+            opts_lst = ['']
+        for opts in opts_lst:
             exe = '{here}/../../bin/findsame {outer_opts} ' \
                   '{opts}'.format(here=here, 
                                   opts=opts,

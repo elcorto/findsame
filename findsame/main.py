@@ -4,8 +4,13 @@ from findsame import calc
 
 
 def calc_fprs(files_dirs, config):
-    file_fpr_func = functools.partial(calc.hash_file,
-                                      blocksize=config.blocksize)
+    if config.limit:
+        file_fpr_func = functools.partial(calc.hash_file_limit,
+                                          blocksize=config.blocksize,
+                                          limit=config.limit)
+    else:
+        file_fpr_func = functools.partial(calc.hash_file,
+                                          blocksize=config.blocksize)
     file_fprs = dict()
     dir_fprs = dict()
     for path in files_dirs:
