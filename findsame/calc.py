@@ -65,14 +65,20 @@ def hash_file(fn, blocksize=config.blocksize):
 
 
 def hash_file_limit(fn, blocksize=config.blocksize, limit=None):
+    assert limit is not None
+    _blocksize = limit if blocksize > limit else blocksize
+    if _blocksize < limit:
+        while limit % _blocksize != 0:
+            _blocksize -= 1
+        assert _blocksize > 0
     hasher = HASHFUNC()
     size = 0
     with open(fn, 'rb') as fd:
-        buf = fd.read(blocksize)
+        buf = fd.read(_blocksize)
         size += len(buf)
         while buf and size <= limit:
             hasher.update(buf)
-            buf = fd.read(blocksize)
+            buf = fd.read(_blocksize)
             size += len(buf)
     return hasher.hexdigest()
 
