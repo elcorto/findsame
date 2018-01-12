@@ -1,4 +1,4 @@
-import subprocess, os, json, random, sys
+import subprocess, os, json, random, sys, hashlib
 from findsame import calc
 from findsame import common as co
 pj = os.path.join
@@ -54,15 +54,34 @@ def test_dict_equal():
 
 def test_hash_file():
     fn = pj(os.path.dirname(__file__), 'data/lena.png')
-    assert calc.hash_file(fn) == hash_file_subprocess(fn)
+    assert calc.hash_file(fn) == hash_file_subprocess(fn) \
+        == '0a96c2e755258bd46abdde729f8ee97d234dd04e'
+
 
 def test_hash_file_limit():
-    fn = pj(os.path.dirname(__file__), 'data/lena.png')
-    ref = hash_file_subprocess(fn)
-    val = calc.hash_file_limit(fn, limit=os.stat(fn).st_size)
-    assert val == ref
-    val = calc.hash_file_limit(fn, limit=os.stat(fn).st_size - 1)
-    assert val != ref
+    file_200_a = pj(os.path.dirname(__file__), 'data/file_200_a')
+    file_200_a_200_b = pj(os.path.dirname(__file__), 'data/file_200_a_200_b')
+    hashes = {file_200_a: 'e61cfffe0d9195a525fc6cf06ca2d77119c24a40',
+              file_200_a_200_b: 'c29d2522ff37716a8aed11cec28555dd583d8497'}
+    empty_hash = hashlib.sha1(b'').hexdigest()
+    assert hashes[file_200_a] == calc.hash_file(file_200_a) == \
+        hashlib.sha1(b'a'*200).hexdigest()
+    assert hashes[file_200_a_200_b] == calc.hash_file(file_200_a_200_b) == \
+        hashlib.sha1(b'a'*200 + b'b'*200).hexdigest()
+    for bs in [10, 33, 199, 200, 201, 433, 500]:
+        for fn,hsh in hashes.items():
+            assert calc.hash_file(fn, blocksize=bs) == hsh
+            for limit in [400, 401, 433, 600]:
+                assert calc.hash_file_limit(fn, blocksize=bs, limit=limit) == hsh
+            assert calc.hash_file_limit(fn, blocksize=bs, limit=200) == \
+                    hashes[file_200_a]
+    assert calc.hash_file_limit(file_200_a, limit=0) == empty_hash        
+    for limit in [1,33,199,200]:
+        assert calc.hash_file_limit(file_200_a_200_b, limit=limit) == \
+                calc.hash_file_limit(file_200_a, limit=limit) == \
+                calc.hash_file_limit(file_200_a_200_b, limit=limit) == \
+                hashlib.sha1(b'a'*limit).hexdigest()
+        
 
 def _preproc_json_verbose(val, ref_fn):
     val = json.loads(val)
@@ -70,11 +89,13 @@ def _preproc_json_verbose(val, ref_fn):
         ref = json.load(fd)
     return val, ref, lambda x,y: co.dict_equal(x, y)
 
+
 def _preproc_json(val, ref_fn):
     val = json.loads(val)
     with open(ref_fn) as fd:
         ref = json.load(fd)
     return val, ref, lambda x,y: x == y
+
 
 def test_exe_stdout():
     preproc_func = _preproc_json
@@ -104,6 +125,7 @@ def test_exe_stdout():
                 ref_fn = '{here}/ref_output_{name}'.format(here=here, name=name)
                 val, ref, comp = preproc_func(out, ref_fn)
                 assert comp(val, ref), "val:\n{}\nref:\n{}".format(val, ref)
+
 
 def test_size_str():
     sizes = [1023, random.randint(1000, 300000000000)]
