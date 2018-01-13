@@ -14,16 +14,16 @@ if __name__ == '__main__':
                         help='files and/or dirs to compare', default=[])
     parser.add_argument('-b', '--blocksize', 
                         default=co.size2str(config.blocksize),
-                        help='read-in blocksize in hash calculation, '
+                        help='blocksize in hash calculation, '
                              'use units K,M,G as in 100M, 218K or just '
                              '1024 (bytes) '
                              '[default: %(default)s]')
     parser.add_argument('-l', '--limit', 
                         default=co.size2str(config.limit),
                         help='read limit (bytes), same units as BLOCKSIZE, '
-                             'calculate hash only for the first LIMIT '
-                             'bytes, makes things go faster for may large files '
-                             '[default: %(default)s]')
+                             'calculate hash only over the first LIMIT '
+                             'bytes, makes things go faster for may large '
+                             'files, try 500K [default: %(default)s]')
     parser.add_argument('-p', '--nprocs', 
                         default=1, type=int,
                         help='number of parallel processes [default: %(default)s]')

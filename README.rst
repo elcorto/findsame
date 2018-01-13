@@ -6,6 +6,9 @@ Find duplicate files and directories.
 As other tools we use file hashes but additionally, we report duplicate
 directories as well, using a Merkle tree for directory hash calculation.
 
+To increase performance, we use parallel hash calculation and optional limits
+on to-be-hashed data.
+
 usage
 -----
 
@@ -23,13 +26,12 @@ usage
     optional arguments:
       -h, --help            show this help message and exit
       -b BLOCKSIZE, --blocksize BLOCKSIZE
-                            read-in blocksize in hash calculation, use units K,M,G
-                            as in 100M, 218K or just 1024 (bytes) [default:
-                            256.0K]
+                            blocksize in hash calculation, use units K,M,G as in
+                            100M, 218K or just 1024 (bytes) [default: 256.0K]
       -l LIMIT, --limit LIMIT
                             read limit (bytes), same units as BLOCKSIZE, calculate
-                            hash only for the first LIMIT bytes, makes things go
-                            faster for may large files [default: None]
+                            hash only over the first LIMIT bytes, makes things go
+                            faster for may large files, try 500K [default: None]
       -p NPROCS, --nprocs NPROCS
                             number of parallel processes [default: 1]
       -t NTHREADS, --nthreads NTHREADS
@@ -47,52 +49,110 @@ the test suite data::
     [
       {
         "dir:empty": [
-          "tests/data/dir2/empty_dir",
-          "tests/data/dir2/empty_dir_copy",
-          "tests/data/empty_dir",
-          "tests/data/empty_dir_copy"
+          "data/dir2/empty_dir",
+          "data/dir2/empty_dir_copy",
+          "data/empty_dir",
+          "data/empty_dir_copy"
         ],
         "file:empty": [
-          "tests/data/dir2/empty_dir/empty_file",
-          "tests/data/dir2/empty_dir_copy/empty_file",
-          "tests/data/empty_dir/empty_file",
-          "tests/data/empty_dir_copy/empty_file",
-          "tests/data/empty_file",
-          "tests/data/empty_file_copy"
+          "data/dir2/empty_dir/empty_file",
+          "data/dir2/empty_dir_copy/empty_file",
+          "data/empty_dir/empty_file",
+          "data/empty_dir_copy/empty_file",
+          "data/empty_file",
+          "data/empty_file_copy"
         ]
       },
       {
         "dir": [
-          "tests/data/dir1",
-          "tests/data/dir1_copy"
+          "data/dir1",
+          "data/dir1_copy"
         ]
       },
       {
         "file": [
-          "tests/data/file1",
-          "tests/data/file1_copy"
+          "data/file1",
+          "data/file1_copy"
         ]
       },
       {
         "file": [
-          "tests/data/dir1/file2",
-          "tests/data/dir1/file2_copy",
-          "tests/data/dir1_copy/file2",
-          "tests/data/dir1_copy/file2_copy",
-          "tests/data/file2"
+          "data/dir1/file2",
+          "data/dir1/file2_copy",
+          "data/dir1_copy/file2",
+          "data/dir1_copy/file2_copy",
+          "data/file2"
         ]
       },
       {
         "file": [
-          "tests/data/lena.png",
-          "tests/data/lena_copy.png"
+          "data/lena.png",
+          "data/lena_copy.png"
         ]
       }
     ]
 
-With hashes::
+This is a json array (list) of objects (dictionaries) of same-hash files/dirs.
 
-    $ ../../bin/findsame data -o2 | jq . | head -n20
+Note that currently, we skip symlinks.
+
+performance
+-----------
+By default, we use ``--nthreads`` equal to the number of cores. However, the
+most speed is gained by using ``--limit``. Note that this may lead to false
+positives, if files are exactly equal in the first ``LIMIT`` bytes.
+
+tests
+-----
+Run ``nosetests3`` (maybe ``apt-get install python3-nose`` before (Debian)).
+
+benchmarks
+----------
+You may run the benchmark script to find the best blocksize and number threads
+and/or processes for hash calculations on your machine::
+
+    $ cd benchmark
+    $ rm -rf files pics results.json; ./benchmark.py
+    $ ./plot.py
+
+This writes test files of various size to ``benchmark/files`` and runs a couple
+of benchmarks (runtime ~10 min for all benchmarks). Tune ``maxsize`` in
+``benchmark.py`` to have faster tests or disable some benchmark functions.
+
+Bottom line:
+
+* blocksizes below 512 KiB (``--blocksize 512K``) work best for all file sizes
+  on most systems, even though the variation to worst timings is at most factor
+  1.25 (e.g. 1 vs. 1.25 seconds)
+* multithreading (``-t/--nthreads``): up to 2x speedup on dual-core box -- very
+  efficient, use NTHREADS = number of cores for good baseline performance
+  (problem is mostly IO-bound)
+* multiprocessing (``-p/--nprocs``): less efficient speedup, but on some
+  systems NPROCS + NTHREADS is even a bit faster than NTHREADS alone, testing
+  is mandatory
+* we have a linear increase of runtime with filesize, of course
+
+Tested systems:
+
+* Lenovo E330, Samsung 840 Evo SSD, Core i3-3120M (2 cores, 2 threads / core)
+* Lenovo X230, Samsung 840 Evo SSD, Core i5-3210M (2 cores, 2 threads / core)
+
+    * best blocksizes = 256K
+    * speedups: NPROCS=2: 1.5, NTHREADS=2..3: 1.9,
+      no gain when using NPROCS+NTHREADS
+
+* FreeNAS 11 (FreeBSD 11.0), ZFS mirror WD Red WD40EFRX, Intel Celeron J3160
+  (4 cores, 1 thread / core)
+
+    * best blocksizes = 80K
+    * speedups: NPROCS=3..4: 2.1..2.2, NTHREADS=4..6: 2.6..2.7, NPROCS=3..4,NTHREADS=4: 3
+
+more usage examples
+-------------------
+
+Output with hashes (``-o 2``, default is ``-o 1``)::
+
+    $ findsame data -o2 | jq . | head -n20
     {
       "da39a3ee5e6b4b0d3255bfef95601890afd80709": {
         "dir:empty": [
@@ -114,8 +174,11 @@ With hashes::
         "dir": [
           "data/dir1",
 
-Note that the order of key-value entries in the output from both
-``findsame`` and ``jq`` is random.
+In this case the output is one json object where all same-hash files/dirs are
+found at the same key (hash).
+
+Note that the order of key-value entries in the output from both ``findsame``
+and ``jq`` is random.
 
 Post-processing is only limited by your ability to process json (using ``jq``,
 Python, ...).
@@ -239,56 +302,6 @@ of equal files/dirs, e.g.::
 
     $ findsame data | jq '.[]|.[]|.[1:]|.[]' | xargs cp -rvt duplicates/
 
-performance
------------
-By default, we use ``--nthreads`` equal to the number of cores. However, the
-most speed is gained by using ``--limit``, but note that may lead to false
-positives, if files are exactly the same in the first ``LIMIT`` bytes.
-
-tests
------
-Run ``nosetests3`` (maybe ``apt-get install python3-nose`` before (Debian)).
-
-benchmarks
-----------
-You may run the benchmark script to find the best blocksize and number threads
-and/or processes for hash calculations on your machine::
-
-    $ cd benchmark
-    $ rm -rf files pics results.json; ./benchmark.py
-    $ ./plot.py
-
-This writes test files of various size to ``benchmark/files`` and runs a couple
-of benchmarks (runtime ~10 min for all benchmarks). Tune ``maxsize`` in
-``benchmark.py`` to have faster tests or disable some benchmark functions.
-
-Bottom line:
-
-* blocksizes below 512 KiB (``--blocksize 512K``) work best for all file sizes
-  on most systems, even though the variation to worst timings is at most factor
-  1.25 (e.g. 1 vs. 1.25 seconds)
-* multithreading (``-t/--nthreads``): up to 2x speedup on dual-core box -- very
-  efficient, use NTHREADS = number of cores for good baseline performance
-  (problem is mostly IO-bound)
-* multiprocessing (``-p/--nprocs``): less efficient speedup, but on some
-  systems NPROCS + NTHREADS is even a bit faster than NTHREADS alone, testing
-  is mandatory
-* we have a linear increase of runtime with filesize, of course
-
-Tested systems:
-
-* Lenovo E330, Samsung 840 Evo SSD, Core i3-3120M (2 cores, 2 threads / core)
-* Lenovo X230, Samsung 840 Evo SSD, Core i5-3210M (2 cores, 2 threads / core)
-
-    * best blocksizes = 256K
-    * speedups: NPROCS=2: 1.5, NTHREADS=2..3: 1.9,
-      no gain when using NPROCS+NTHREADS
-
-* FreeNAS 11 (FreeBSD 11.0), ZFS mirror WD Red WD40EFRX, Intel Celeron J3160
-  (4 cores, 1 thread / core)
-
-    * best blocksizes = 80K
-    * speedups: NPROCS=3..4: 2.1..2.2, NTHREADS=4..6: 2.6..2.7, NPROCS=3..4,NTHREADS=4: 3
 
 other tools
 -----------
