@@ -127,6 +127,30 @@ def test_exe_stdout():
                 assert comp(val, ref), "val:\n{}\nref:\n{}".format(val, ref)
 
 
+def test_jq():
+    jq_cmd_lst = ["jq '.[]|select(.dir)|.dir'",
+                  "jq '.[]|select(.file)|.file'",
+                  "jq '.[]|.[]|[.[0]]'",
+                  "jq '.[]|.[]|.[0]'",
+                  "jq '.[]|.[]|.[1:]'",
+                  "jq '.[]|.[]|.[1:]|.[]'",
+                  ]
+    for jq_cmd in jq_cmd_lst:
+        res = []
+        for outopt in ['-o1', '-o2']:
+            cmd = '{here}/../../bin/findsame data {outopt} ' \
+                  '| {jq_cmd}'.format(here=here, 
+                                      outopt=outopt,
+                                      jq_cmd=jq_cmd)
+            print(cmd)
+            out = subprocess.check_output(cmd, shell=True)
+            out = out.decode()
+            out = out.replace(here + '/','')
+            print(out)
+            res.append(out)
+        assert res[0] ==  res[1]
+
+
 def test_size_str():
     sizes = [1023, random.randint(1000, 300000000000)]
     for size in sizes:
