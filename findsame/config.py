@@ -2,6 +2,10 @@ class Config:
     def __init__(self, *args, **kwds):
         for kk,vv in kwds.items():
             setattr(self, kk, vv)
+    
+    def __repr__(self):
+        return self.__dict__.__repr__()
+
     def update(self, dct):
         for kk,vv in dct.items():
             setattr(self, kk, vv)
