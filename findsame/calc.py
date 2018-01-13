@@ -26,7 +26,6 @@ from findsame.config import config
 from findsame.parallel import ProcessAndThreadPoolExecutor, \
     SequentialPoolExecutor
 
-VERBOSE = False
 HASHFUNC = hashlib.sha1
 
 
@@ -127,8 +126,7 @@ class Element:
     
     @co.lazyprop
     def fpr(self):
-        if VERBOSE:
-            co.debug_msg("fpr: {}".format(self.name))
+        co.debug_msg("fpr: {}".format(self.name))
         return self._get_fpr()
 
     def _get_fpr(self):
@@ -177,7 +175,7 @@ class Leaf(Element):
 
 
 class MerkleTree:
-    def __init__(self, dr, calc=True, config=config, leaf_fpr_func=hash_file):
+    def __init__(self, dr, calc=True, leaf_fpr_func=hash_file):
         self.nprocs = config.nprocs
         self.nthreads = config.nthreads
         self.dr = dr
@@ -203,8 +201,7 @@ class MerkleTree:
             node = Node(name=root, childs=[])
             for base in files:
                 fn = os.path.join(root, base)
-                if VERBOSE:
-                    co.debug_msg("build_tree: {}".format(fn))
+                co.debug_msg("build_tree: {}".format(fn))
                 # skipping links
                 if os.path.exists(fn) and os.path.isfile(fn) \
                         and not os.path.islink(fn):
@@ -212,7 +209,7 @@ class MerkleTree:
                     node.add_child(leaf)
                     leafs[fn] = leaf
                 else:
-                    co.debug_msg("SKIP: {}".format(fn))
+                    co.debug_msg("skip link: {}".format(fn))
             # add node as child to parent node, relies on top-down os.walk
             # root        = /foo/bar/baz
             # parent_root = /foo/bar

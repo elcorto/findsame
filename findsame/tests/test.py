@@ -83,7 +83,7 @@ def test_hash_file_limit():
                 hashlib.sha1(b'a'*limit).hexdigest()
         
 
-def _preproc_json_verbose(val, ref_fn):
+def _preproc_json_with_hash(val, ref_fn):
     val = json.loads(val)
     with open(ref_fn) as fd:
         ref = json.load(fd)
@@ -99,12 +99,13 @@ def _preproc_json(val, ref_fn):
 
 def test_exe_stdout():
     preproc_func = _preproc_json
-    cases = [('json_verbose', '-v', _preproc_json_verbose, ''), 
+    cases = [('json_with_hash', '-o2', _preproc_json_with_hash, ''), 
+             ('json', '-o1', _preproc_json, '| jq sort'),
              ('json', '', _preproc_json, '| jq sort'),
              ]
     for name, outer_opts, preproc_func, post in cases:
         # test all combos only once which are not related to output formatting
-        if name == 'json_verbose':
+        if name == 'json_with_hash':
             opts_lst = ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K', '-l 128K']
         else:
             opts_lst = ['']
@@ -114,9 +115,8 @@ def test_exe_stdout():
                                   opts=opts,
                                   outer_opts=outer_opts)
             for args in ['data', 'data/*']:
-                cmd = '{exe} {here}/{args} 2>&1 | ' \
-                      'grep -v SKIP {post}'.format(exe=exe, args=args,
-                                                   here=here, post=post)
+                cmd = '{exe} {here}/{args} {post}'.format(exe=exe, args=args,
+                                                          here=here, post=post)
                 print(cmd)
                 out = subprocess.check_output(cmd, shell=True)
                 out = out.decode()

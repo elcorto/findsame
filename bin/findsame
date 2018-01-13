@@ -17,27 +17,33 @@ if __name__ == '__main__':
                         help='read-in blocksize in hash calculation, '
                              'use units K,M,G as in 100M, 218K or just '
                              '1024 (bytes) '
-                             '[%(default)s]')
+                             '[default: %(default)s]')
     parser.add_argument('-l', '--limit', 
                         default=co.size2str(config.limit),
                         help='read limit (bytes), same units as BLOCKSIZE, '
                              'calculate hash only for the first LIMIT '
                              'bytes, makes things go faster for may large files '
-                             '[%(default)s]')
+                             '[default: %(default)s]')
     parser.add_argument('-p', '--nprocs', 
                         default=1, type=int,
-                        help='number of parallel processes [%(default)s]')
+                        help='number of parallel processes [default: %(default)s]')
     parser.add_argument('-t', '--nthreads', 
                         default=cpu_count(), type=int,
                         help='threads per process [%(default)s]')
+    parser.add_argument('-o', '--outmode', 
+                        default=1, type=int,
+                        help='1: json, 2: json with hashes [default: %(default)s]')
     parser.add_argument('-v', '--verbose', 
                         default=False, action='store_true',
-                        help='output actual hashes as well')
+                        help='enable verbose/debugging output')
     args = parser.parse_args()
-
+    
+    # global state .. yuck .. but so useful
     config.nprocs = args.nprocs
     config.nthreads = args.nthreads
     config.blocksize = co.str2size(args.blocksize)
     config.limit = co.str2size(args.limit)
     config.verbose = args.verbose
-    print(json.dumps(main.main(files_dirs=args.files_dirs, config=config)))
+    config.outmode = args.outmode
+
+    print(json.dumps(main.main(files_dirs=args.files_dirs)))

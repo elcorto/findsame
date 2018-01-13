@@ -6,16 +6,14 @@ Find duplicate files and directories.
 As other tools we use file hashes but additionally, we report duplicate
 directories as well, using a Merkle tree for directory hash calculation.
 
-XXX update verbose
-
 usage
 -----
 
 ::
 
-    $ ./bin/findsame -h
-    usage: findsame [-h] [-b BLOCKSIZE] [-p NPROCS] [-t NTHREADS]
-                 file/dir [file/dir ...]
+    usage: findsame [-h] [-b BLOCKSIZE] [-l LIMIT] [-p NPROCS] [-t NTHREADS]
+                    [-o OUTMODE] [-v]
+                    file/dir [file/dir ...]
 
     Find same files and dirs based on file hashes.
 
@@ -26,52 +24,83 @@ usage
       -h, --help            show this help message and exit
       -b BLOCKSIZE, --blocksize BLOCKSIZE
                             read-in blocksize in hash calculation, use units K,M,G
-                            as in 100M, 218K or just 1024 (bytes) [256.0K]
+                            as in 100M, 218K or just 1024 (bytes) [default:
+                            256.0K]
+      -l LIMIT, --limit LIMIT
+                            read limit (bytes), same units as BLOCKSIZE, calculate
+                            hash only for the first LIMIT bytes, makes things go
+                            faster for may large files [default: None]
       -p NPROCS, --nprocs NPROCS
-                            number of parallel processes
+                            number of parallel processes [default: 1]
       -t NTHREADS, --nthreads NTHREADS
-                            threads per process
+                            threads per process [2]
+      -o OUTMODE, --outmode OUTMODE
+                            1: json, 2: json with hashes [default: 1]
+      -v, --verbose         enable verbose/debugging output
 
-The output format is json::
-
-    {
-        hash1: {
-            dir/file: [
-                name1,
-                name2,
-                ...
-            ]
-        hash2: {
-            ...
-            },
-        ...
-    }
-
+The output format is json, either with or without hashes (see ``--outmode``).
 Use `jq <https://stedolan.github.io/jq>`_ for pretty-printing. Example using
 the test suite data::
 
     $ cd findsame/tests
     $ findsame data | jq .
-    {
-      "0a96c2e755258bd46abdde729f8ee97d234dd04e": {
-        "file": [
-          "data/lena.png",
-          "data/lena_copy.png"
+    [
+      {
+        "dir:empty": [
+          "tests/data/dir2/empty_dir",
+          "tests/data/dir2/empty_dir_copy",
+          "tests/data/empty_dir",
+          "tests/data/empty_dir_copy"
+        ],
+        "file:empty": [
+          "tests/data/dir2/empty_dir/empty_file",
+          "tests/data/dir2/empty_dir_copy/empty_file",
+          "tests/data/empty_dir/empty_file",
+          "tests/data/empty_dir_copy/empty_file",
+          "tests/data/empty_file",
+          "tests/data/empty_file_copy"
         ]
       },
-      "312382290f4f71e7fb7f00449fb529fce3b8ec95": {
-        "file": [
-          "data/file1",
-          "data/file1_copy"
-        ]
-      },
-      "55341fe74a3497b53438f9b724b3e8cdaf728edc": {
+      {
         "dir": [
-          "data/dir1",
-          "data/dir1_copy"
+          "tests/data/dir1",
+          "tests/data/dir1_copy"
         ]
       },
+      {
+        "file": [
+          "tests/data/file1",
+          "tests/data/file1_copy"
+        ]
+      },
+      {
+        "file": [
+          "tests/data/dir1/file2",
+          "tests/data/dir1/file2_copy",
+          "tests/data/dir1_copy/file2",
+          "tests/data/dir1_copy/file2_copy",
+          "tests/data/file2"
+        ]
+      },
+      {
+        "file": [
+          "tests/data/lena.png",
+          "tests/data/lena_copy.png"
+        ]
+      }
+    ]
+
+With hashes::
+
+    $ ../../bin/findsame data -o2 | jq . | head -n20
+    {
       "da39a3ee5e6b4b0d3255bfef95601890afd80709": {
+        "dir:empty": [
+          "data/dir2/empty_dir",
+          "data/dir2/empty_dir_copy",
+          "data/empty_dir",
+          "data/empty_dir_copy"
+        ],
         "file:empty": [
           "data/dir2/empty_dir/empty_file",
           "data/dir2/empty_dir_copy/empty_file",
@@ -79,25 +108,11 @@ the test suite data::
           "data/empty_dir_copy/empty_file",
           "data/empty_file",
           "data/empty_file_copy"
-        ],
-        "dir:empty": [
-          "data/dir2/empty_dir",
-          "data/dir2/empty_dir_copy",
-          "data/empty_dir",
-          "data/empty_dir_copy"
         ]
       },
-      "9619a9b308cdebee40f6cef018fef0f4d0de2939": {
-        "file": [
-          "data/dir1/file2",
-          "data/dir1/file2_copy",
-          "data/dir1_copy/file2",
-          "data/dir1_copy/file2_copy",
-          "data/file2"
-        ]
-      }
-    }
-
+      "55341fe74a3497b53438f9b724b3e8cdaf728edc": {
+        "dir": [
+          "data/dir1",
 
 Note that the order of key-value entries in the output from both
 ``findsame`` and ``jq`` is random.
@@ -113,7 +128,8 @@ A common task is to find only groups of equal dirs::
       "data/dir1_copy"
     ]
 
-Or only the files::
+This and all other ``jq`` commands work for both outmodes (``-o 1``, ``-o 2``).
+Now only the files::
 
     $ findsame data | jq '.[]|select(.file)|.file'
     [
@@ -221,7 +237,13 @@ And w/o lists::
 The last one can be used, for example, to delete all but the first in a group
 of equal files/dirs, e.g.::
 
-    $ findsame data | jq '.[]|.[]|.[1:]|.[]' | xargs cp -rvt duplicates/ 
+    $ findsame data | jq '.[]|.[]|.[1:]|.[]' | xargs cp -rvt duplicates/
+
+performance
+-----------
+By default, we use ``--nthreads`` equal to the number of cores. However, the
+most speed is gained by using ``--limit``, but note that may lead to false
+positives, if files are exactly the same in the first ``LIMIT`` bytes.
 
 tests
 -----
@@ -229,7 +251,6 @@ Run ``nosetests3`` (maybe ``apt-get install python3-nose`` before (Debian)).
 
 benchmarks
 ----------
-We like performance, that's why we have a pretty extensive benchmark suite.
 You may run the benchmark script to find the best blocksize and number threads
 and/or processes for hash calculations on your machine::
 
@@ -248,10 +269,10 @@ Bottom line:
   1.25 (e.g. 1 vs. 1.25 seconds)
 * multithreading (``-t/--nthreads``): up to 2x speedup on dual-core box -- very
   efficient, use NTHREADS = number of cores for good baseline performance
-  (problem is mostly IO-bound) 
+  (problem is mostly IO-bound)
 * multiprocessing (``-p/--nprocs``): less efficient speedup, but on some
   systems NPROCS + NTHREADS is even a bit faster than NTHREADS alone, testing
-  is mandatory 
+  is mandatory
 * we have a linear increase of runtime with filesize, of course
 
 Tested systems:
@@ -260,7 +281,7 @@ Tested systems:
 * Lenovo X230, Samsung 840 Evo SSD, Core i5-3210M (2 cores, 2 threads / core)
 
     * best blocksizes = 256K
-    * speedups: NPROCS=2: 1.5, NTHREADS=2..3: 1.9, 
+    * speedups: NPROCS=2: 1.5, NTHREADS=2..3: 1.9,
       no gain when using NPROCS+NTHREADS
 
 * FreeNAS 11 (FreeBSD 11.0), ZFS mirror WD Red WD40EFRX, Intel Celeron J3160

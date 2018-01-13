@@ -1,9 +1,10 @@
 import functools, os
 from findsame import common as co
 from findsame import calc
+from findsame.config import config
 
 
-def calc_fprs(files_dirs, config):
+def calc_fprs(files_dirs):
     if config.limit:
         file_fpr_func = functools.partial(calc.hash_file_limit,
                                           blocksize=config.blocksize,
@@ -18,12 +19,12 @@ def calc_fprs(files_dirs, config):
         if os.path.isfile(path) and not os.path.islink(path):
             file_fprs[path] = file_fpr_func(path)
         elif os.path.isdir(path):
-            tree = calc.MerkleTree(path, calc=True, config=config,
+            tree = calc.MerkleTree(path, calc=True,
                                    leaf_fpr_func=file_fpr_func)
             file_fprs.update(tree.leaf_fprs)
             dir_fprs.update(tree.node_fprs)
         else:
-            co.debug_msg("SKIP: {}".format(path))
+            co.debug_msg("skip link: {}".format(path))
     
     # leaf_fprs, dir_fprs:
     #   {path1: fprA,
@@ -40,7 +41,7 @@ def calc_fprs(files_dirs, config):
     return file_store, dir_store
 
 
-def assemble_result(file_store, dir_store, verbose=False):
+def assemble_result(file_store, dir_store):
     # result:
     #   {fprA: {typX: [path1, path2],
     #            typY: [path3]},
@@ -76,19 +77,20 @@ def assemble_result(file_store, dir_store, verbose=False):
                 typ_paths = hsh_dct.get(typ, []) + paths
                 hsh_dct.update({typ: typ_paths})
                 result.update({hsh: hsh_dct})
-    if verbose:
+    if config.outmode == 1:
+        return [dct for dct in result.values()]
+    elif config.outmode == 2:
         return result
     else:
-        return [dct for dct in result.values()]
+        raise Exception("illegal value for "
+                        "outmode: {}".format(config.outmode))
 
 
-def main(files_dirs, config):
+def main(files_dirs):
     """
     Parameters
     ----------
     files_dirs : seq
         list of strings w/ files and/or dirs
-    config : config.Config
     """
-    return assemble_result(*calc_fprs(files_dirs, config),
-                           verbose=config.verbose)
+    return assemble_result(*calc_fprs(files_dirs))

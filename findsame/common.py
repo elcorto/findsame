@@ -1,4 +1,5 @@
 import sys
+from findsame.config import config
 
 KiB = 1024
 MiB = KiB**2
@@ -102,4 +103,5 @@ class lazyprop:
 
 
 def debug_msg(msg):
-    sys.stderr.write(msg + "\n")
+    if config.verbose:
+        sys.stderr.write(msg + "\n")

@@ -17,4 +17,6 @@ config = Config(nprocs=1,
                 blocksize=256*1024, 
                 share_leafs=True,
                 limit=None,
+                outmode=1,
+                verbose=False,
                 )
