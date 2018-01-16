@@ -63,21 +63,49 @@ def hash_file(fn, blocksize=config.blocksize):
     return hasher.hexdigest()
 
 
+def adjust_sizes(blocksize, limit):
+    """Make sure that `blocksize` fits `limit` (size and modulo) such that we
+    never read beyond `limit`.
+
+    Note
+    ----
+    This function is slow and shall not be used in inner loops. That's why we
+    have :func:`hash_file_limit` for interactive use and
+    :func:`hash_file_limit_core` for inner loops.
+    """
+    bs = blocksize
+    li = limit
+    if li is not None:
+        assert li > 0, "limit must be > 0"
+        bs = li if bs > li else bs
+        if bs < li:
+            while li % bs != 0:
+                bs -= 1
+            assert bs > 0
+    return bs, li
+
+
 def hash_file_limit(fn, blocksize=config.blocksize, limit=None):
-    assert limit is not None
-    _blocksize = limit if blocksize > limit else blocksize
-    if _blocksize < limit:
-        while limit % _blocksize != 0:
-            _blocksize -= 1
-        assert _blocksize > 0
+    return hash_file_limit_core(fn, *adjust_sizes(blocksize, limit))
+
+
+def hash_file_limit_core(fn, blocksize=None, limit=None):
+    # These tests need to be here. Timing shows that they cost virtually
+    # nothing. Only adjust_sizes() is slow and was thus moved out.
+    assert blocksize is not None and (blocksize > 0)
+    assert (limit is not None) and (limit > 0)
+    if blocksize < limit:
+        assert limit % blocksize == 0
+    else:
+        assert blocksize % limit == 0
     hasher = HASHFUNC()
     size = 0
     with open(fn, 'rb') as fd:
-        buf = fd.read(_blocksize)
+        buf = fd.read(blocksize)
         size += len(buf)
         while buf and size <= limit:
             hasher.update(buf)
-            buf = fd.read(_blocksize)
+            buf = fd.read(blocksize)
             size += len(buf)
     return hasher.hexdigest()
 

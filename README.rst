@@ -102,6 +102,11 @@ By default, we use ``--nthreads`` equal to the number of cores. However, the
 most speed is gained by using ``--limit``. Note that this may lead to false
 positives, if files are exactly equal in the first ``LIMIT`` bytes.
 
+Use a simple script to verify (assume that the biggest file is < 100 GiB)::
+
+    $ for x in 100K 300K 500K 1M 5M 100G; do echo $x; findsame -l $x /path/to/dir > /tmp/same-$x; done
+    $ for y in $(ls -1 /tmp/same-*); do diff -q $y /tmp/same-100G; done 
+
 tests
 -----
 Run ``nosetests3`` (maybe ``apt-get install python3-nose`` before (Debian)).
@@ -306,4 +311,4 @@ of equal files/dirs, e.g.::
 other tools
 -----------
 * ``fdupes``
-* ``fdindup`` from ``fslint``
+* ``findup`` from ``fslint``

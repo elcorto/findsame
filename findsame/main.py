@@ -6,7 +6,7 @@ from findsame.config import config
 
 def calc_fprs(files_dirs):
     if config.limit:
-        file_fpr_func = functools.partial(calc.hash_file_limit,
+        file_fpr_func = functools.partial(calc.hash_file_limit_core,
                                           blocksize=config.blocksize,
                                           limit=config.limit)
     else:

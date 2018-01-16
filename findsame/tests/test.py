@@ -63,7 +63,6 @@ def test_hash_file_limit():
     file_200_a_200_b = pj(os.path.dirname(__file__), 'data/file_200_a_200_b')
     hashes = {file_200_a: 'e61cfffe0d9195a525fc6cf06ca2d77119c24a40',
               file_200_a_200_b: 'c29d2522ff37716a8aed11cec28555dd583d8497'}
-    empty_hash = hashlib.sha1(b'').hexdigest()
     assert hashes[file_200_a] == calc.hash_file(file_200_a) == \
         hashlib.sha1(b'a'*200).hexdigest()
     assert hashes[file_200_a_200_b] == calc.hash_file(file_200_a_200_b) == \
@@ -75,7 +74,6 @@ def test_hash_file_limit():
                 assert calc.hash_file_limit(fn, blocksize=bs, limit=limit) == hsh
             assert calc.hash_file_limit(fn, blocksize=bs, limit=200) == \
                     hashes[file_200_a]
-    assert calc.hash_file_limit(file_200_a, limit=0) == empty_hash        
     for limit in [1,33,199,200]:
         assert calc.hash_file_limit(file_200_a_200_b, limit=limit) == \
                 calc.hash_file_limit(file_200_a, limit=limit) == \
@@ -106,7 +104,8 @@ def test_exe_stdout():
     for name, outer_opts, preproc_func, post in cases:
         # test all combos only once which are not related to output formatting
         if name == 'json_with_hash':
-            opts_lst = ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K', '-l 128K']
+            opts_lst = ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K', '-l 128K', 
+                        '-b 99K -l 500K']
         else:
             opts_lst = ['']
         for opts in opts_lst:

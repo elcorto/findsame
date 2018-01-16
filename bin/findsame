@@ -3,7 +3,7 @@
 import argparse, json
 from multiprocessing import cpu_count
 from findsame import common as co
-from findsame import main
+from findsame import main, calc
 from findsame.config import config
 
 if __name__ == '__main__':
@@ -45,5 +45,10 @@ if __name__ == '__main__':
     config.limit = co.str2size(args.limit)
     config.verbose = args.verbose
     config.outmode = args.outmode
+    
+    # modify here once since we use hash_file_limit_core w/o adjustment in inner
+    # loops b/c of speed
+    config.blocksize, config.limit = calc.adjust_sizes(config.blocksize,
+                                                       config.limit)
 
     print(json.dumps(main.main(files_dirs=args.files_dirs)))
