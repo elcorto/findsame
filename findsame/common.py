@@ -1,4 +1,4 @@
-import sys
+import sys, functools
 from findsame.config import config
 
 KiB = 1024
@@ -105,3 +105,11 @@ class lazyprop:
 def debug_msg(msg):
     if config.verbose:
         sys.stderr.write(msg + "\n")
+
+
+def called(func):
+    @functools.wraps(func)
+    def wrapper(*args, **kwds):
+        debug_msg(f"DEBUG: calling: {func.__name__}")
+        return func(*args, **kwds)
+    return wrapper
