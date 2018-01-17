@@ -5,26 +5,29 @@ from findsame.config import config
 
 
 def calc_fprs(files_dirs):
-    if config.limit:
+    if config.limit is None:
+        file_fpr_func = functools.partial(calc.hash_file,
+                                          blocksize=config.blocksize)
+    else:
         file_fpr_func = functools.partial(calc.hash_file_limit_core,
                                           blocksize=config.blocksize,
                                           limit=config.limit)
-    else:
-        file_fpr_func = functools.partial(calc.hash_file,
-                                          blocksize=config.blocksize)
     file_fprs = dict()
     dir_fprs = dict()
     for path in files_dirs:
-        # skipping links
-        if os.path.isfile(path) and not os.path.islink(path):
+        _islink = os.path.islink(path)
+        # skip links
+        if os.path.isfile(path) and not _islink:
             file_fprs[path] = file_fpr_func(path)
         elif os.path.isdir(path):
             tree = calc.MerkleTree(path, calc=True,
                                    leaf_fpr_func=file_fpr_func)
             file_fprs.update(tree.leaf_fprs)
             dir_fprs.update(tree.node_fprs)
-        else:
+        elif _islink:
             co.debug_msg("skip link: {}".format(path))
+        else:
+            raise Exception("unkown file/dir type for: {}".format(path))
     
     # leaf_fprs, dir_fprs:
     #   {path1: fprA,

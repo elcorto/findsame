@@ -134,11 +134,13 @@ def test_jq():
                   "jq '.[]|.[]|.[1:]'",
                   "jq '.[]|.[]|.[1:]|.[]'",
                   ]
+    data = pj(os.path.dirname(__file__), 'data')
     for jq_cmd in jq_cmd_lst:
         res = []
         for outopt in ['-o1', '-o2']:
-            cmd = '{here}/../../bin/findsame data {outopt} ' \
+            cmd = '{here}/../../bin/findsame {data} {outopt} ' \
                   '| {jq_cmd}'.format(here=here, 
+                                      data=data,
                                       outopt=outopt,
                                       jq_cmd=jq_cmd)
             print(cmd)

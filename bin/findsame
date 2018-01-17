@@ -50,5 +50,5 @@ if __name__ == '__main__':
     # loops b/c of speed
     config.blocksize, config.limit = calc.adjust_sizes(config.blocksize,
                                                        config.limit)
-
+    
     print(json.dumps(main.main(files_dirs=args.files_dirs)))
