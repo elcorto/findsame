@@ -12,6 +12,7 @@ def to_seq(arg):
     else:
         return [arg]
 
+
 def plot(study, df, xprop, yprop, const_prop=None, plot='plot'):
     const_prop = to_seq(const_prop) if const_prop is not None else None
     if study in df.study.values:
@@ -110,9 +111,9 @@ if __name__ == '__main__':
             ymin_thread = y[min_idx_thread]
             zmin_thread = Z[0,min_idx_thread]
             print(title)
-            print("global min: p={:.0f} t={:.0f}, speedup (max/min): {:.1f}".format(x[min_idx[0]], y[min_idx[1]], Z.max()/zmin))
-            print("proc   min: {:.0f},       speedup (max/min): {:.1f}".format(x[min_idx_proc], Z.max()/zmin_proc))
-            print("thread min: {:.0f},       speedup (max/min): {:.1f}".format(y[min_idx_thread], Z.max()/zmin_thread))
+            print("global min: nproc={:.0f} nthread={:.0f}, speedup (max/min): {:.1f}".format(x[min_idx[0]], y[min_idx[1]], Z.max()/zmin))
+            print("proc   min: {:.0f},                 speedup (max/min): {:.1f}".format(x[min_idx_proc], Z.max()/zmin_proc))
+            print("thread min: {:.0f},                 speedup (max/min): {:.1f}".format(y[min_idx_thread], Z.max()/zmin_thread))
             ax.plot([xmin], [ymin], [zmin], 'go', ms=5)
             ax.plot([xmin_proc], [ymin_proc], [zmin_proc], 'ro', ms=5)
             ax.plot([xmin_thread], [ymin_thread], [zmin_thread], 'ro', ms=5)

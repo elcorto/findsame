@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import timeit, os, sys, shutil, os
+import timeit, os, sys, shutil, os, textwrap
 from tempfile import mkdtemp
 
 import pandas as pd
@@ -117,8 +117,11 @@ def func(dct, stmt=None, setup=None):
 
 
 def bench_main_blocksize_filesize(tmpdir, maxsize):
-    setup = "from findsame import main"
-    stmt = """main.main({files_dirs}, blocksize={blocksize})"""
+    setup = "from findsame import main, config"
+    stmt = textwrap.dedent("""
+        config.config.update(dict(blocksize={blocksize}))
+        main.main({files_dirs})
+        """)
     params = []
 
     # single files, test filesize and blocksize
@@ -161,10 +164,14 @@ def bench_main_blocksize_filesize(tmpdir, maxsize):
 
 
 def bench_main_parallel(tmpdir, maxsize):
-    setup = "from findsame import main"
-    stmt = """main.main({files_dirs}, blocksize={blocksize},
-                        nthreads={nthreads}, nprocs={nprocs},
-                        share_leafs={share_leafs})"""
+    setup = "from findsame import main, config"
+    stmt = textwrap.dedent("""
+        config.config.update(dict(blocksize={blocksize},
+                                  nthreads={nthreads}, 
+                                  nprocs={nprocs},
+                                  share_leafs={share_leafs}))
+        main.main({files_dirs})
+        """)
     params = []
 
     study = 'main_parallel'
@@ -202,10 +209,13 @@ def bench_main_parallel(tmpdir, maxsize):
 
 
 def bench_main_parallel_2d(tmpdir, maxsize):
-    setup = "from findsame import main"
-    stmt = """main.main({files_dirs}, blocksize={blocksize},
-                        nthreads={nthreads}, nprocs={nprocs})"""
-
+    setup = "from findsame import main, config"
+    stmt = textwrap.dedent("""
+        config.config.update(dict(blocksize={blocksize},
+                                  nthreads={nthreads}, 
+                                  nprocs={nprocs}))
+        main.main({files_dirs})
+        """)
     params = []
 
     study = 'main_parallel_2d'
