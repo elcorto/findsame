@@ -27,3 +27,10 @@ https://github.com/elcorto/unfish).)
 stdout/stderr
 -------------
 Use logging module.
+
+limit (-l flag)
+---------------
+We'd like to implement an automatic scheme where we increase ``LIMIT`` as long
+as files are equal, which should quickly converge and is most likely necessary
+only for a small fraction of files. For most files, we probably get away with a
+500K limit.

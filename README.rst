@@ -107,6 +107,10 @@ Use a simple script to verify (assume that the biggest file is < 100 GiB)::
     $ for x in 100K 300K 500K 1M 5M 100G; do echo $x; findsame -l $x /path/to/dir > /tmp/same-$x; done
     $ for y in $(ls -1 /tmp/same-*); do diff -q $y /tmp/same-100G; done 
 
+Yes this is mostly academic since you need to hash a pile of files multipe
+times in order to find the fastest but still correct setting. See the TODO file
+for details.
+
 tests
 -----
 Run ``nosetests3`` (maybe ``apt-get install python3-nose`` before (Debian)).
