@@ -23,7 +23,10 @@ def plot(study, df, xprop, yprop, const_prop=None, plot='plot'):
             const_params = [{'study': study}]
         else:
             # const_prop = ['pool_type', 'share_leafs']
-            # const_vals = [('thread', True), ('thread', False), ('proc', True), ('proc', False)]
+            # const_vals = [('thread', True), 
+            #               ('thread', False), 
+            #               ('proc', True), 
+            #               ('proc', False)]
             # const_params =
             #   [{'pool_type': 'thread', 'share_leafs': True},
             #    {'pool_type': 'thread', 'share_leafs': False},
@@ -55,7 +58,6 @@ def plot(study, df, xprop, yprop, const_prop=None, plot='plot'):
         ax.set_ylabel(ylabel)
         fig.subplots_adjust(bottom=0.2)
         ax.legend()
-        os.makedirs('pics', exist_ok=True)
         tmp = np.unique(df.maxsize_str.values)
         assert len(tmp) == 1
         maxsize_str = tmp[0]
@@ -64,6 +66,7 @@ def plot(study, df, xprop, yprop, const_prop=None, plot='plot'):
 
 
 def savefig(fig, name):
+    os.makedirs('pics', exist_ok=True)
 ##    for ext in ['pdf', 'png']:
     for ext in ['png']:
         fig.savefig("pics/{name}.{ext}".format(name=name, ext=ext), dpi=300)
@@ -79,12 +82,16 @@ if __name__ == '__main__':
         dfall.share_leafs = dfall.share_leafs.astype(bool)
     for maxsize_str in np.unique(dfall.maxsize_str.values):
         df = dfall[dfall.maxsize_str == maxsize_str]
-        plot('main_blocksize_single', df, 'blocksize', 'timing', 'filesize_str', plot='semilogx')
-        plot('main_filesize_single', df, 'filesize', 'timing', 'blocksize_str')
-        plot('main_blocksize', df, 'blocksize', 'timing', plot='semilogx')
-
-        plot('main_parallel', df, 'nworkers', 'timing', ['pool_type', 'share_leafs'])
-        plot('hash_file_parallel', df, 'nworkers', 'timing', 'pool_type')
+        if 'main_blocksize_single' in df.study.values:
+            plot('main_blocksize_single', df, 'blocksize', 'timing', 'filesize_str', plot='semilogx')
+        if 'main_filesize_single' in df.study.values:
+            plot('main_filesize_single', df, 'filesize', 'timing', 'blocksize_str')
+        if 'main_blocksize' in df.study.values:
+            plot('main_blocksize', df, 'blocksize', 'timing', plot='semilogx')
+        if 'main_parallel' in df.study.values:
+            plot('main_parallel', df, 'nworkers', 'timing', ['pool_type', 'share_leafs'])
+        if 'hash_file_parallel' in df.study.values:
+            plot('hash_file_parallel', df, 'nworkers', 'timing', 'pool_type')
 
         study = 'main_parallel_2d'
         title = '{} maxsize={}'.format(study, maxsize_str)
