@@ -1,7 +1,9 @@
 import subprocess, os, json, random, sys, hashlib
 from findsame import calc
 from findsame import common as co
+from findsame import config
 pj = os.path.join
+cfg = config.getcfg()
 
 
 here = os.path.abspath(os.path.dirname(__file__))
@@ -59,6 +61,7 @@ def test_hash_file():
 
 
 def test_hash_file_limit():
+    bs = cfg.blocksize
     file_200_a = pj(os.path.dirname(__file__), 'data/file_200_a')
     file_200_a_200_b = pj(os.path.dirname(__file__), 'data/file_200_a_200_b')
     hashes = {file_200_a: 'e61cfffe0d9195a525fc6cf06ca2d77119c24a40',
@@ -75,9 +78,9 @@ def test_hash_file_limit():
             assert calc.hash_file_limit(fn, blocksize=bs, limit=200) == \
                     hashes[file_200_a]
     for limit in [1,33,199,200]:
-        assert calc.hash_file_limit(file_200_a_200_b, limit=limit) == \
-                calc.hash_file_limit(file_200_a, limit=limit) == \
-                calc.hash_file_limit(file_200_a_200_b, limit=limit) == \
+        assert calc.hash_file_limit(file_200_a_200_b, limit=limit, blocksize=bs) == \
+                calc.hash_file_limit(file_200_a, limit=limit, blocksize=bs) == \
+                calc.hash_file_limit(file_200_a_200_b, limit=limit, blocksize=bs) == \
                 hashlib.sha1(b'a'*limit).hexdigest()
         
 

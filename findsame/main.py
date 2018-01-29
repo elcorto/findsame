@@ -1,17 +1,16 @@
 import functools, os
 from findsame import common as co
 from findsame import calc
-from findsame.config import config
 
 
-def calc_fprs(files_dirs):
-    if config.limit is None:
+def calc_fprs(files_dirs, cfg):
+    if cfg.limit is None:
         file_fpr_func = functools.partial(calc.hash_file,
-                                          blocksize=config.blocksize)
+                                          blocksize=cfg.blocksize)
     else:
         file_fpr_func = functools.partial(calc.hash_file_limit_core,
-                                          blocksize=config.blocksize,
-                                          limit=config.limit)
+                                          blocksize=cfg.blocksize,
+                                          limit=cfg.limit)
     file_fprs = dict()
     dir_fprs = dict()
     for path in files_dirs:
@@ -21,7 +20,8 @@ def calc_fprs(files_dirs):
             file_fprs[path] = file_fpr_func(path)
         elif os.path.isdir(path):
             tree = calc.MerkleTree(path, calc=True,
-                                   leaf_fpr_func=file_fpr_func)
+                                   leaf_fpr_func=file_fpr_func,
+                                   cfg=cfg)
             file_fprs.update(tree.leaf_fprs)
             dir_fprs.update(tree.node_fprs)
         elif _islink:
@@ -44,7 +44,7 @@ def calc_fprs(files_dirs):
     return file_store, dir_store
 
 
-def assemble_result(file_store, dir_store):
+def assemble_result(file_store, dir_store, cfg):
     # result:
     #   {fprA: {typX: [path1, path2],
     #            typY: [path3]},
@@ -80,20 +80,20 @@ def assemble_result(file_store, dir_store):
                 typ_paths = hsh_dct.get(typ, []) + paths
                 hsh_dct.update({typ: typ_paths})
                 result.update({hsh: hsh_dct})
-    if config.outmode == 1:
+    if cfg.outmode == 1:
         return [dct for dct in result.values()]
-    elif config.outmode == 2:
+    elif cfg.outmode == 2:
         return result
     else:
         raise Exception("illegal value for "
-                        "outmode: {}".format(config.outmode))
+                        "outmode: {}".format(cfg.outmode))
 
 
-def main(files_dirs):
+def main(files_dirs, cfg):
     """
     Parameters
     ----------
     files_dirs : seq
         list of strings w/ files and/or dirs
     """
-    return assemble_result(*calc_fprs(files_dirs))
+    return assemble_result(*calc_fprs(files_dirs, cfg), cfg)

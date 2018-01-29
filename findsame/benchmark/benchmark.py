@@ -14,6 +14,12 @@ from findsame import calc
 pj = os.path.join
 
 
+default_setup = textwrap.dedent("""
+    from findsame import main, config
+    cfg = config.getcfg()
+    """)
+ 
+
 def mkparams(*args):
     return ps.loops2params(product(*args))
 
@@ -107,20 +113,20 @@ def write_collection(collection_size=GiB, min_size=128*KiB, tmpdir=None,
     return testdir, group_dirs, files
 
 
-def func(dct, stmt=None, setup=None):
+def psweep_callback(dct, stmt=None, setup=None, ctx=None):
     """Default callback func for psweep.run()."""
     timing = timeit.repeat(stmt.format(**dct),
                            setup,
                            repeat=3,
-                           number=1)
+                           number=1,
+                           globals=ctx)
     return {'timing': min(timing)}
 
 
 def bench_main_blocksize_filesize(tmpdir, maxsize):
-    setup = "from findsame import main, config"
     stmt = textwrap.dedent("""
-        config.config.update(dict(blocksize={blocksize}))
-        main.main({files_dirs})
+        cfg.update(dict(blocksize={blocksize}))
+        main.main({files_dirs}, cfg)
         """)
     params = []
 
@@ -160,17 +166,16 @@ def bench_main_blocksize_filesize(tmpdir, maxsize):
                         ps.seq2dicts('blocksize_str', map(size2str,
                                                           blocksize))))
     params += this
-    return None, stmt, setup, params
+    return None, stmt, None, params
 
 
 def bench_main_parallel(tmpdir, maxsize):
-    setup = "from findsame import main, config"
     stmt = textwrap.dedent("""
-        config.config.update(dict(blocksize={blocksize},
-                                  nthreads={nthreads}, 
-                                  nprocs={nprocs},
-                                  share_leafs={share_leafs}))
-        main.main({files_dirs})
+        cfg.update(dict(blocksize={blocksize},
+                        nthreads={nthreads}, 
+                        nprocs={nprocs},
+                        share_leafs={share_leafs}))
+        main.main({files_dirs}, cfg)
         """)
     params = []
 
@@ -205,16 +210,15 @@ def bench_main_parallel(tmpdir, maxsize):
                             ps.seq2dicts('blocksize_str', list(map(size2str,
                                                                    blocksize)))))
         params += this
-    return None, stmt, setup, params
+    return None, stmt, None, params
 
 
 def bench_main_parallel_2d(tmpdir, maxsize):
-    setup = "from findsame import main, config"
     stmt = textwrap.dedent("""
-        config.config.update(dict(blocksize={blocksize},
-                                  nthreads={nthreads}, 
-                                  nprocs={nprocs}))
-        main.main({files_dirs})
+        cfg.update(dict(blocksize={blocksize},
+                        nthreads={nthreads}, 
+                        nprocs={nprocs}))
+        main.main({files_dirs}, cfg)
         """)
     params = []
 
@@ -231,7 +235,7 @@ def bench_main_parallel_2d(tmpdir, maxsize):
                         ps.seq2dicts('blocksize_str', list(map(size2str,
                                                                blocksize)))))
     params += this
-    return None, stmt, setup, params
+    return None, stmt, None, params
 
 
 def worker_bench_hash_file_parallel(fn):
@@ -252,7 +256,7 @@ def bench_hash_file_parallel(tmpdir, maxsize):
                 'thread,proc=1': lambda nw: pl.ProcessAndThreadPoolExecutor(1, nw),
                 }
 
-    def func(dct, stmt=None, setup='pass'):
+    def callback(dct, stmt=None, setup='pass', ctx=None):
         ctx = dict(pool_map=pool_map,
                    pl=pl,
                    files=files,
@@ -262,7 +266,8 @@ def bench_hash_file_parallel(tmpdir, maxsize):
                                setup=setup,
                                repeat=3,
                                number=1,
-                               globals=ctx)
+                               globals=ctx,
+                               )
         return {'timing': min(timing)}
 
     setup = 'pass'
@@ -282,7 +287,7 @@ with pool_map['{pool_type}']({nworkers}) as pool:
     params += [{'study': study, 'pool_type': 'seq', 'nworkers': 1,
                 'maxsize_str': size2str(maxsize)}]
 
-    return func, stmt, setup, params
+    return callback, stmt, setup, params
 
 
 def update(df1, df2):
@@ -346,15 +351,19 @@ if __name__ == '__main__':
         twoGB = 2*GiB-1
     else:
         twoGB = 2*GiB
-##    for maxsize in [50*MiB]:
+##    for maxsize in [25*MiB]:
     for maxsize in [GiB]:
 ##    for maxsize in [GiB, twoGB]:
 ##    for maxsize in [0.005*GiB]:
         for idx, bench_func in enumerate(bench_funcs):
             _callback, stmt, setup, params = bench_func(tmpdir, maxsize)
-            callback = func if _callback is None else _callback
+            callback = psweep_callback if _callback is None else _callback
+            setup = default_setup if setup is None else setup
             _df = pd.DataFrame()
-            df = update(df, ps.run(_df, lambda p: callback(p, stmt, setup), params))
+            df = update(df, ps.run(_df, 
+                                   lambda p: callback(p, stmt, setup), 
+                                   params))
+
             ps.df_json_write(df, 'save_{}_up_to_{}_{}.json'.format(idx,
                                                                    bench_func.__name__,
                                                                    size2str(maxsize)))
