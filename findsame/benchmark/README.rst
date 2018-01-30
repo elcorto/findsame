@@ -13,26 +13,20 @@ line profiler and run findsame with nworkers=1 (default)::
     63|    108245|      32.4784|  0.000300045| 31.13%|            buf = fd.read(blocksize)
     64|     34079|     0.353401|  1.03701e-05|  0.34%|    return hasher.hexdigest()
 
-Performance is eaten 33% by I/O and 33% by hashing, the rest is general Python
-slowness, but hash_file() is the hot spot with 66% runtime. So the process is
-33% I/O bound?
+Apparently, performance is eaten 33% by I/O and 33% by hashing, the rest is
+general Python slowness, but hash_file() is the hot spot with 66% runtime. So
+the process is 33% I/O bound?
 
 We test parallelization of hash_file() over files. The general wisdom is that
 for CPU-bound problems, we need to use proceses (ProcessPoolExecutor or
 multiprocessing.Pool) to bypass the GIL. That works best for low numbers of
 large chunky workloads per core (i.e. coarse-grained parallelization) b/c of
-process overhead. 
+process overhead. With that, we get a speedup of ~1.3 .
 
 On the other hand, it is "well known" that one can fight I/O-bound problems
-with threads. Indeed, we see a speedup of 1.5..1.6, which is a bit more than
-1.33. Our test system is a Core i3 or Core i5 which has 2 threads per core.
-Since threading in Python is still bound to one interpreter process by the GIL,
-it is unclear where the speedup actually comes from. Rumor has it that threads
-waiting for IO do actualy release the GIL. The behavior is the same on a system
-with 1 thread per core (i.e. no Intel Hyperthreading).
-
-We know from benchmark.py that we actually get a 2-fold *slowdown* with
-processes, when benchmarking the whole application (benchmark.bench_main).
-However on the toy problem here, which is to use only the presumed hot spot
-hash_file() in bench_parallel(), we get the *same* speedUP as with
-ThreadPoolExecutor. Lesson: always benchmark with real-world data.
+with threads. Indeed, we see a speedup of 1.8! Our test system is a Core i3 or
+Core i5 which has 2 threads per core. Since threading in Python is still bound
+to one interpreter process by the GIL, it is at first sight unclear where the
+speedup actually comes from. Rumor has it that threads waiting for IO do
+actualy release the GIL. The behavior is the same on a system with 1 thread per
+core (i.e. no Intel Hyperthreading).
