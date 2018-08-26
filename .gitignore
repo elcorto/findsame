@@ -3,4 +3,4 @@
 **.egg-info
 findsame/benchmark/files/
 findsame/benchmark/pics/
-findsame/benchmark/results*.json
+findsame/benchmark/*.json*

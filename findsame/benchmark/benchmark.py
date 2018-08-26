@@ -14,7 +14,6 @@ from findsame import calc
 pj = os.path.join
 
 
-
 default_setup = textwrap.dedent("""
     from findsame import main, config
     cfg = config.getcfg()
@@ -40,7 +39,7 @@ def bytes_linspace(start, stop, num):
 def write(fn, size):
     """Write a single file of `size` in bytes to path `fn`."""
     data = b'x'*int(size)
-    print("write: {}".format(fn))
+##    print("    write: {}".format(fn))
     with open(fn, 'wb') as fd:
         fd.write(data)
 
@@ -48,6 +47,7 @@ def write(fn, size):
 def write_single_files(testdir, sizes):
     """Wite ``len(sizes)`` files to ``{testdir}/filesize_{size}/file``. Each
     file has ``sizes[i]`` in bytes. Return a list of file names."""
+##    print("  write_single_files: sizes: {}".format(list(map(size2str, sizes))))
     files = []
     for filesize in sizes:
         dr = pj(testdir, 'filesize_{}'.format(size2str(filesize)))
@@ -69,13 +69,12 @@ def write_file_groups(testdir, sizes, group_size=None):
         group_size = max(sizes)
     else:
         assert group_size >= max(sizes)
-    print("writing file groups, group_size: {}".format(size2str(group_size)))
+##    print("  write_file_groups: group_size: {}".format(size2str(group_size)))
     group_dirs = []
     files = []
     for _filesize in sizes:
         filesize = int(_filesize)
         filesize_str = size2str(filesize)
-        print("  filesize: {}".format(filesize_str))
         dr = pj(testdir, 'filesize_{}'.format(filesize_str))
         group_dirs.append(dr)
         if not os.path.exists(dr):
@@ -104,6 +103,7 @@ def write_collection(collection_size=GiB, min_size=128*KiB, tmpdir=None,
     This is used to create a syntetic real-wold-like file distribution on a
     system with many small and few large files.
     """
+##    print("  write_collection: collection_size: {}".format(size2str(collection_size)))
     group_size = int(collection_size/ngroups)
     assert group_size > 0
     filesize = bytes_logspace(min_size,group_size, ngroups)
@@ -358,6 +358,7 @@ if __name__ == '__main__':
 ##    for maxsize in [GiB]:
 ##    for maxsize in [GiB, twoGB]:
         for idx, bench_func in enumerate(bench_funcs):
+            print(bench_func.__name__)
             _callback, stmt, setup, params = bench_func(tmpdir, maxsize)
             callback = psweep_callback if _callback is None else _callback
             setup = default_setup if setup is None else setup
@@ -366,7 +367,6 @@ if __name__ == '__main__':
                 return callback(p, stmt, setup)
 
             df = update(df, ps.run(func, params, poolsize=None, save=False))
-
             ps.df_write(df, 'save_{}_up_to_{}_{}.json'.format(idx,
                                                               bench_func.__name__,
                                                               size2str(maxsize)),
