@@ -21,7 +21,7 @@ reqs = [('matplotlib', 'matplotlib', None, None),
         ('nose', 'nose', None, None),
         ('pandas', 'pandas', None, None),
         ('numpy', 'numpy', None, None),
-        ('psweep', 'psweep', None, None),
+        ('psweep', 'psweep', '>=', '0.2.1'),
         ]
 
 for pip_name,import_name,op,ver in reqs:

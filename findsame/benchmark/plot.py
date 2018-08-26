@@ -77,7 +77,7 @@ if __name__ == '__main__':
         results = sys.argv[1]
     else:
         results = 'results.json'
-    dfall = ps.df_json_read(results)
+    dfall = ps.df_read(results, fmt='json')
     if 'share_leafs' in dfall.columns:
         dfall.share_leafs = dfall.share_leafs.astype(bool)
     for maxsize_str in np.unique(dfall.maxsize_str.values):

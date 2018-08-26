@@ -351,21 +351,24 @@ if __name__ == '__main__':
         twoGB = 2*GiB-1
     else:
         twoGB = 2*GiB
-##    for maxsize in [25*MiB]:
-    for maxsize in [GiB]:
+    # for quick testing of this script
+    for maxsize in [20*MiB]:
+##    # production setting
+##    for maxsize in [GiB]:
 ##    for maxsize in [GiB, twoGB]:
-##    for maxsize in [0.005*GiB]:
         for idx, bench_func in enumerate(bench_funcs):
             _callback, stmt, setup, params = bench_func(tmpdir, maxsize)
             callback = psweep_callback if _callback is None else _callback
             setup = default_setup if setup is None else setup
-            _df = pd.DataFrame()
-            df = update(df, ps.run(_df, 
-                                   lambda p: callback(p, stmt, setup), 
-                                   params))
 
-            ps.df_json_write(df, 'save_{}_up_to_{}_{}.json'.format(idx,
-                                                                   bench_func.__name__,
-                                                                   size2str(maxsize)))
+            def func(p):
+                return callback(p, stmt, setup)
+
+            df = update(df, ps.run(func, params, poolsize=None, save=False))
+
+            ps.df_write(df, 'save_{}_up_to_{}_{}.json'.format(idx,
+                                                              bench_func.__name__,
+                                                              size2str(maxsize)),
+                        fmt='json')
     backup(results)
-    ps.df_json_write(df, results)
+    ps.df_write(df, results, fmt='json')
