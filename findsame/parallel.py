@@ -4,6 +4,7 @@ import time, itertools
 
 # TODO: investigate Executor.map(..., chunksize=N) with N>1 (default N=1)
 
+
 def chop(_seq, nchunks=1):
     """Chop sequence into `nchunks` chunks of approximately equal length."""
     # hack: to get the length, we have to leave the nice iterators-only land
@@ -34,10 +35,10 @@ class SequentialPoolExecutor:
     def map(self, worker, seq, **kwds):
         for item in seq:
             yield worker(item)
-    
+
     def __enter__(self, *args):
         return self
-    
+
     def __exit__(self, *args):
         pass
 
@@ -49,7 +50,7 @@ class ProcessAndThreadPoolExecutor(Executor):
     def __init__(self, nprocs, nthreads):
         self.nprocs = nprocs
         self.nthreads = nthreads
-    
+
     def process_worker(self, subseq):
         """Worker function for ProcessPoolExecutor. Spawn a thread pool of
         self.nthreads size in each process."""
@@ -61,7 +62,7 @@ class ProcessAndThreadPoolExecutor(Executor):
             # Looks like we need to force a wait for the completion of the
             # evaluation of thread_pool.map().
             return iter(list(thread_pool.map(self.thread_worker, subseq)))
-    
+
     def map(self, thread_worker, seq, **kwds):
         # Cannot define process_worker inside map():
         #     AttributeError: Can't pickle local object
@@ -72,7 +73,7 @@ class ProcessAndThreadPoolExecutor(Executor):
             results = process_pool.map(self.process_worker, chop(seq,
                                                                  self.nprocs), **kwds)
             return itertools.chain(*results)
-            
+
 
 if __name__ == '__main__':
     lst = range(20)

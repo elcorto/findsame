@@ -28,7 +28,7 @@ def calc_fprs(files_dirs, cfg):
             co.debug_msg("skip link: {}".format(path))
         else:
             raise Exception("unkown file/dir type for: {}".format(path))
-    
+
     # leaf_fprs, dir_fprs:
     #   {path1: fprA,
     #    path2: fprA,
@@ -69,7 +69,7 @@ def assemble_result(file_store, dir_store, cfg):
                 #   lens  = [1,2,3]
                 #   diffs = [1,1,1]
                 if kind == 'dir':
-                    lens = [len(calc.split_path(x)) for x in paths] 
+                    lens = [len(calc.split_path(x)) for x in paths]
                     diffs = map(lambda x,y: y-x, lens[:-1], lens[1:])
                     if functools.reduce(lambda x,y: x == y == 1, diffs):
                         continue

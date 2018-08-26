@@ -18,7 +18,7 @@ python3
   generated with python2.
 """
 
-import os, hashlib, sys
+import os, hashlib
 ##from multiprocessing import Pool # same as ProcessPoolExecutor
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from findsame import common as co
@@ -150,7 +150,7 @@ class Element:
 
     def __repr__(self):
         return "{}:{}".format(self.kind, self.name)
-    
+
     @co.lazyprop
     def fpr(self):
         co.debug_msg("fpr: {}".format(self.name))
@@ -251,21 +251,21 @@ class MerkleTree:
             self.top = top
             self.nodes = nodes
             self.leafs = leafs
-    
+
     # pool.map(lambda kv: (k, v.fpr), ...) in calc_fprs() doesn't work,
     # error is "Can't pickle ... lambda ...", same with defining _worker()
     # inside calc_fprs(), need to def it in outer scope
     @staticmethod
     def _worker(kv):
         return kv[0], kv[1].fpr
-    
+
     # XXX maybe add special-case code to ProcessAndThreadPoolExecutor
     def calc_fprs(self):
         useproc = False
         """Trigger recursive fpr calculation."""
         # leafs can be calculated in parallel since there are no dependencies
         if self.nthreads == 1 and self.nprocs == 1:
-            # same as 
+            # same as
             #   self.leaf_fprs = dict((k,v.fpr) for k,v in self.leafs.items())
             # just looks nicer :)
             getpool = SequentialPoolExecutor
@@ -280,11 +280,11 @@ class MerkleTree:
             getpool = lambda: ProcessAndThreadPoolExecutor(nprocs=self.nprocs,
                                                            nthreads=self.nthreads)
             useproc = True
-        with getpool() as pool: 
-            self.leaf_fprs = dict(pool.map(self._worker, 
+        with getpool() as pool:
+            self.leaf_fprs = dict(pool.map(self._worker,
                                            self.leafs.items(),
                                            chunksize=1))
-        
+
         # The node_fprs calculation below causes a slowdown with
         # ProcessPoolExecutor if we do not assign calculated leaf fprs
         # beforehand. This is b/c we do not operate on self.leaf_fprs, which
@@ -303,7 +303,7 @@ class MerkleTree:
         if useproc and self.share_leafs:
             for leaf in self.leafs.values():
                 leaf.fpr = self.leaf_fprs[leaf.name]
-        
+
         # v.fpr attribute access triggers recursive fpr calculation for all
         # nodes. For only kicking off the calculation, it would be sufficient
         # to call top.fpr . However, we also put all node fprs in a dict here,

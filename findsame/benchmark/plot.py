@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 
 import os, sys, collections, itertools, functools
-from psweep import psweep as ps
-from matplotlib import pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+
 import numpy as np
+
+from matplotlib import pyplot as plt
+# for projection='3d'
+from mpl_toolkits.mplot3d import Axes3D
+
+from psweep import psweep as ps
+
 
 def to_seq(arg):
     if isinstance(arg, collections.Sequence) and not isinstance(arg, str):
@@ -23,9 +28,9 @@ def plot(study, df, xprop, yprop, const_prop=None, plot='plot'):
             const_params = [{'study': study}]
         else:
             # const_prop = ['pool_type', 'share_leafs']
-            # const_vals = [('thread', True), 
-            #               ('thread', False), 
-            #               ('proc', True), 
+            # const_vals = [('thread', True),
+            #               ('thread', False),
+            #               ('proc', True),
             #               ('proc', False)]
             # const_params =
             #   [{'pool_type': 'thread', 'share_leafs': True},
@@ -38,7 +43,7 @@ def plot(study, df, xprop, yprop, const_prop=None, plot='plot'):
         xticks = []
         xticklabels = []
         for const_pset in const_params:
-            msk = functools.reduce(np.logical_and, 
+            msk = functools.reduce(np.logical_and,
                                    ((df[kk]==vv) for kk,vv in const_pset.items()))
             label = ','.join("{}={}".format(kk,vv) for kk,vv in const_pset.items())
             x = df[msk][xprop]
@@ -103,7 +108,7 @@ if __name__ == '__main__':
             zz = df2d.timing.values
             x = np.unique(xx)
             y = np.unique(yy)
-            X,Y = np.meshgrid(x, y, indexing='ij');
+            X,Y = np.meshgrid(x, y, indexing='ij')
             Z = zz.reshape((len(x),len(y))).T
             min_idx = np.unravel_index(np.argmin(Z), Z.shape)
             min_idx_proc = Z[:,0].argmin()

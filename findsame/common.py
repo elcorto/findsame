@@ -89,7 +89,7 @@ def dict_equal(aa, bb):
 class lazyprop:
     """Decorator for creating lazy evaluated properties.
     The property should represent non-mutable data, as it replaces itself.
-    
+
     kudos: Cyclone over at stackoverflow!
     http://stackoverflow.com/questions/3012421/python-lazy-property-decorator
     """

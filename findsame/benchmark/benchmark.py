@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import timeit, os, sys, shutil, os, textwrap
+import timeit, os, sys, shutil, textwrap
 from tempfile import mkdtemp
 
 import pandas as pd
@@ -14,11 +14,12 @@ from findsame import calc
 pj = os.path.join
 
 
+
 default_setup = textwrap.dedent("""
     from findsame import main, config
     cfg = config.getcfg()
     """)
- 
+
 
 def mkparams(*args):
     return ps.loops2params(product(*args))
@@ -61,8 +62,8 @@ def write_file_groups(testdir, sizes, group_size=None):
     """For each file size (bytes) in `sizes`, write a group of ``nfiles`` files
     ``{testdir}/filesize_{size}/file_{idx}; idx=0...nfiles-1``, such that each
     dir ``filesize_{size}`` has approximately ``group_size``. If `group_size`
-    is omitted, then use ``group_size=max(size)`` such that the the group with
-    the largest file ``size`` has only one file. Returns lists of group dirs
+    is omitted, then use ``group_size=max(sizes)`` such that the the group with
+    the largest file size has only one file. Returns lists of group dirs
     and file names."""
     if group_size is None:
         group_size = max(sizes)
@@ -93,7 +94,7 @@ def write_file_groups(testdir, sizes, group_size=None):
 def write_collection(collection_size=GiB, min_size=128*KiB, tmpdir=None,
                      study=None, ngroups=100):
     """Special-purpose version of write_file_groups().
-    
+
     Write a collection of ``ngroups`` file groups, such that the whole
     collection has approximately ``collection_size``. Each group has equal
     group size of ``collection_size/ngroups`` and an automatically determined
@@ -107,7 +108,7 @@ def write_collection(collection_size=GiB, min_size=128*KiB, tmpdir=None,
     assert group_size > 0
     filesize = bytes_logspace(min_size,group_size, ngroups)
     os.makedirs(tmpdir, exist_ok=True)
-    testdir = mkdtemp(dir=tmpdir, prefix=study)
+    testdir = mkdtemp(dir=tmpdir, prefix=study + '_')
     group_dirs, files = write_file_groups(testdir, filesize,
                                           group_size)
     return testdir, group_dirs, files
@@ -139,10 +140,10 @@ def bench_main_blocksize_filesize(tmpdir, maxsize):
              (bytes_linspace(10*MiB, max_filesize, 5),
               np.array([256*KiB]),
               'main_filesize_single'),
-                ]
+             ]
 
     for filesize, blocksize, study in cases:
-        testdir = mkdtemp(dir=tmpdir, prefix=study)
+        testdir = mkdtemp(dir=tmpdir, prefix=study + '_')
         files = write_single_files(testdir, filesize)
         this = mkparams(zip(ps.seq2dicts('filesize', filesize),
                             ps.seq2dicts('filesize_str', map(size2str,
@@ -172,7 +173,7 @@ def bench_main_blocksize_filesize(tmpdir, maxsize):
 def bench_main_parallel(tmpdir, maxsize):
     stmt = textwrap.dedent("""
         cfg.update(dict(blocksize={blocksize},
-                        nthreads={nthreads}, 
+                        nthreads={nthreads},
                         nprocs={nprocs},
                         share_leafs={share_leafs}))
         main.main({files_dirs}, cfg)
@@ -195,7 +196,7 @@ def bench_main_parallel(tmpdir, maxsize):
                         ps.seq2dicts('share_leafs', [share_leafs]),
                         zip(ps.seq2dicts('blocksize', blocksize),
                             ps.seq2dicts('blocksize_str', list(map(size2str,
-                                                                blocksize)))))
+                                                                   blocksize)))))
         params += this
 
         this = mkparams(ps.seq2dicts('files_dirs', [[testdir]]),
@@ -216,7 +217,7 @@ def bench_main_parallel(tmpdir, maxsize):
 def bench_main_parallel_2d(tmpdir, maxsize):
     stmt = textwrap.dedent("""
         cfg.update(dict(blocksize={blocksize},
-                        nthreads={nthreads}, 
+                        nthreads={nthreads},
                         nprocs={nprocs}))
         main.main({files_dirs}, cfg)
         """)

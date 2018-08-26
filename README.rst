@@ -121,7 +121,7 @@ You may run the benchmark script to find the best blocksize and number threads
 and/or processes for hash calculations on your machine::
 
     $ cd benchmark
-    $ rm -rf files pics results.json; ./benchmark.py
+    $ rm -rf files pics *.json*; ./benchmark.py
     $ ./plot.py
 
 This writes test files of various size to ``benchmark/files`` and runs a couple
