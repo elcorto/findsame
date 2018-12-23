@@ -62,9 +62,19 @@ def hash_file(fn, blocksize=None):
     return hasher.hexdigest()
 
 
-def adjust_sizes(blocksize, limit):
-    """Make sure that `blocksize` fits `limit` (size and modulo) such that we
+def adjust_blocksize(blocksize, limit):
+    """Calculate a new `blocksize` that fits `limit` (size and modulo) such that we
     never read beyond `limit`.
+
+    Parameters
+    ----------
+    blocksize : int
+    limit : int
+
+    Returns
+    -------
+    bs : int
+        new blocksize
 
     Note
     ----
@@ -81,16 +91,21 @@ def adjust_sizes(blocksize, limit):
             while li % bs != 0:
                 bs -= 1
             assert bs > 0
-    return bs, li
+    return bs
 
 
 def hash_file_limit(fn, blocksize=None, limit=None):
-    return hash_file_limit_core(fn, *adjust_sizes(blocksize, limit))
+    """Same as :func:`hash_file`, but stop at approximately `limit` bytes.
+
+    Slow reference implementation b/c of :func:`adjust_blocksize`. In production,
+    use `hash_file_limit_core`.
+    """
+    return hash_file_limit_core(fn, adjust_blocksize(blocksize, limit), limit)
 
 
 def hash_file_limit_core(fn, blocksize=None, limit=None):
     # These tests need to be here. Timing shows that they cost virtually
-    # nothing. Only adjust_sizes() is slow and was thus moved out.
+    # nothing. Only adjust_blocksize() is slow and was thus moved out.
     assert blocksize is not None and (blocksize > 0)
     assert (limit is not None) and (limit > 0)
     if blocksize < limit:

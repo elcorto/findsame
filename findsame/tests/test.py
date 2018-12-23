@@ -60,6 +60,14 @@ def test_hash_file():
         == '0a96c2e755258bd46abdde729f8ee97d234dd04e'
 
 
+def test_adjust_blocksize():
+    limit = 5 
+    for blocksize in [1,2,3,4]:
+        assert calc.adjust_blocksize(blocksize, limit) == 1
+    for blocksize in [5,6,7]:
+        assert calc.adjust_blocksize(blocksize, limit) == 5
+
+
 def test_hash_file_limit():
     bs = cfg.blocksize
     file_200_a = pj(os.path.dirname(__file__), 'data/file_200_a')

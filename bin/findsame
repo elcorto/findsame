@@ -49,7 +49,6 @@ if __name__ == '__main__':
 
     # modify here once since we use hash_file_limit_core w/o adjustment in inner
     # loops b/c of speed
-    cfg.blocksize, cfg.limit = calc.adjust_sizes(cfg.blocksize,
-                                                 cfg.limit)
+    cfg.blocksize = calc.adjust_blocksize(cfg.blocksize, cfg.limit)
 
     print(json.dumps(main.main(files_dirs=args.files_dirs, cfg=cfg)))
