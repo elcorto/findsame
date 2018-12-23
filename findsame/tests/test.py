@@ -82,7 +82,11 @@ def test_hash_file_limit():
         for fn,hsh in hashes.items():
             assert calc.hash_file(fn, blocksize=bs) == hsh
             for limit in [400, 401, 433, 600]:
-                assert calc.hash_file_limit(fn, blocksize=bs, limit=limit) == hsh
+                val = calc.hash_file_limit(fn, 
+                                           blocksize=bs, 
+                                           limit=limit)
+                assert val == hsh, "failed: val={} hsh={} bs={} limit={}".format(
+                    val, hsh, bs, limit)
             assert calc.hash_file_limit(fn, blocksize=bs, limit=200) == \
                     hashes[file_200_a]
     for limit in [1,33,199,200]:

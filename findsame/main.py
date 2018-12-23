@@ -47,7 +47,7 @@ def calc_fprs(files_dirs, cfg):
 def assemble_result(file_store, dir_store, cfg):
     # result:
     #   {fprA: {typX: [path1, path2],
-    #            typY: [path3]},
+    #           typY: [path3]},
     #    fprB: {typX: [...]},
     #    ...}
     result = dict()

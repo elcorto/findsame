@@ -1,21 +1,16 @@
 """
-python3
--------
+python < v3.6
+-------------
 
-* Traversing dict.items() is truly random. We use dicts a lot and the code's
-  output order is unpredictable. With python2, it was the same across repeated
-  runs -- by accident (?) since dicts were always advertised as being
-  random-order access structures.
+In order to guarantee consistent output between two runs on the same data, we
+use OrderedDict. As of Python 3.7, builtin dicts are ordered again. Already in
+3.6, this was an implementation detail of CPython. Before, some Python versions
+had random order dicts, some did not, but it was never in the spec. Still, we
+use OrderedDict to support older Pythons.
 
-  We get same-order output in different runs if we replace each {}/dict() with
-  an OrderedDict(). Still, the output order is different from the
-  python2-generated ref_output in test/.
-
-* The code is slower. No bench yet, but it seems to be startup time, maybe
-  imports?
-
-* To make tests pass, we need to sort the output, as well as the ref_output
-  generated with python2.
+Even with OrderedDict(), the output order is different from the
+python2-generated ordered ref_output in test/. To make tests pass, we need to
+sort the output, as well as the ref_output generated with python2.
 """
 
 import os, hashlib
@@ -124,6 +119,7 @@ def hash_file_limit_core(fn, blocksize=None, limit=None):
     return hasher.hexdigest()
 
 
+# XXX generator instead of list may be faster??
 def split_path(path):
     """//foo/bar/baz -> ['foo', 'bar', 'baz']"""
     return [x for x in path.split('/') if x != '']
@@ -201,7 +197,7 @@ class Node(Element):
             return hashsum('')
 
     def _get_fpr(self):
-        # XXX really need that list here, what about genexpr?
+        # XXX really need that list here, what about generators??
         return self._merge_fpr([c.fpr for c in self.childs])
 
 
