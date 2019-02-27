@@ -1,0 +1,5 @@
+matplotlib
+nose
+pandas
+numpy
+psweep >= 0.2.1

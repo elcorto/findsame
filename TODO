@@ -6,7 +6,7 @@ links is not an option since that fails if the link is dead (target doesn't
 exist anymore). In that case, we still want to be able to compare dirs which
 have links. One option would be to treat them as a file with a one-line content
 which is the link target's name or a combination of link name and target name
-in a string which we can bash, such as
+in a string which we can hash, such as
 
     link -> target
 
