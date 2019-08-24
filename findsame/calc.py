@@ -13,7 +13,9 @@ python2-generated ordered ref_output in test/. To make tests pass, we need to
 sort the output, as well as the ref_output generated with python2.
 """
 
-import os, hashlib
+import os
+import hashlib
+from collections import defaultdict
 ##from multiprocessing import Pool # same as ProcessPoolExecutor
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 from findsame import common as co
@@ -119,7 +121,6 @@ def hash_file_limit_core(fn, blocksize=None, limit=None):
     return hasher.hexdigest()
 
 
-# XXX generator instead of list may be faster??
 def split_path(path):
     """//foo/bar/baz -> ['foo', 'bar', 'baz']"""
     return [x for x in path.split('/') if x != '']
@@ -197,7 +198,6 @@ class Node(Element):
             return hashsum('')
 
     def _get_fpr(self):
-        # XXX really need that list here, what about generators??
         return self._merge_fpr([c.fpr for c in self.childs])
 
 
@@ -205,6 +205,8 @@ class Leaf(Element):
     def __init__(self, *args, fn=None, fpr_func=hash_file, **kwds):
         super().__init__(*args, **kwds)
         self.kind = 'leaf'
+        # XXX rm that, is the same as self.name, use name or rename self.name
+        # -> self.path or smth
         self.fn = fn
         self.fpr_func = fpr_func
 
@@ -213,27 +215,56 @@ class Leaf(Element):
 
 
 class MerkleTree:
-    def __init__(self, dr, calc=True, leaf_fpr_func=hash_file, cfg=None):
+    def __init__(self, dr=None, files=None, calc=True, leaf_fpr_func=hash_file,
+                 cfg=None):
         self.nprocs = cfg.nprocs
         self.nthreads = cfg.nthreads
         self.dr = dr
-        # only for benchmarks and debugging, should always be True in
+        self.files = files
+        assert [files, dr].count(None) == 1, "dr or files must be None"
+        # Change only for benchmarks and debugging, should always be True in
         # production
         self.share_leafs = cfg.share_leafs
         self.leaf_fpr_func = leaf_fpr_func
-        assert os.path.exists(self.dr) and os.path.isdir(self.dr)
         self.build_tree()
         if calc:
             self.calc_fprs()
+
+    @staticmethod
+    def walk_files(files):
+        """Mimic os.walk() given a list of files.
+
+        Example
+        -------
+        >>> for root,_,files in walk_files(files):
+        ...     <here be code>
+
+        Difference to os.walk(): The middle return arg is None and the order is
+        not top-down.
+        """
+        dct = defaultdict(list)
+        for fn in files:
+            dct[os.path.dirname(fn)].append(os.path.basename(fn))
+        for root, files in dct.items():
+            yield root,None,files
+
+    def walker(self):
+        if self.files is not None:
+            return self.walk_files(self.files)
+        elif self.dr is not None:
+            assert os.path.exists(self.dr) and os.path.isdir(self.dr)
+            return os.walk(self.dr)
+        else:
+            raise Exception("files and dr are None")
 
     def build_tree(self):
         """Construct Merkle tree from all dirs and files in directory
         `self.dr`. Don't calculate fprs.
         """
-        nodes = {}
-        leafs = {}
-        top = None
-        for root, dirs, files in os.walk(self.dr):
+        self.nodes = {}
+        self.leafs = {}
+        self.top = None
+        for root, _, files in self.walker():
             # make sure os.path.dirname() returns the parent dir
             if root.endswith('/'):
                 root = root[:-1]
@@ -242,26 +273,22 @@ class MerkleTree:
                 fn = os.path.join(root, base)
                 co.debug_msg(f"build_tree: {fn}")
                 # skipping links
-                if os.path.exists(fn) and os.path.isfile(fn) \
-                        and not os.path.islink(fn):
-                    leaf = Leaf(name=fn, fn=fn, fpr_func=self.leaf_fpr_func)
-                    node.add_child(leaf)
-                    leafs[fn] = leaf
-                else:
+                if os.path.islink(fn):
                     co.debug_msg(f"skip link: {fn}")
-            # add node as child to parent node, relies on top-down os.walk
+                    continue
+                assert os.path.isfile(fn)
+                leaf = Leaf(name=fn, fn=fn, fpr_func=self.leaf_fpr_func)
+                node.add_child(leaf)
+                self.leafs[fn] = leaf
+            # add node as child to parent node
             # root        = /foo/bar/baz
             # parent_root = /foo/bar
-            nodes[root] = node
+            self.nodes[root] = node
             parent_root = os.path.dirname(root)
-            # XXX should always be true, eh??
-            if parent_root in nodes.keys():
-                nodes[parent_root].add_child(node)
-            if top is None:
-                top = node
-            self.top = top
-            self.nodes = nodes
-            self.leafs = leafs
+            if parent_root in self.nodes.keys():
+                self.nodes[parent_root].add_child(node)
+            if self.top is None:
+                self.top = node
 
     # pool.map(lambda kv: (k, v.fpr), ...) in calc_fprs() doesn't work,
     # error is "Can't pickle ... lambda ...", same with defining _worker()
@@ -270,10 +297,9 @@ class MerkleTree:
     def _worker(kv):
         return kv[0], kv[1].fpr
 
-    # XXX maybe add special-case code to ProcessAndThreadPoolExecutor
     def calc_fprs(self):
-        useproc = False
         """Trigger recursive fpr calculation."""
+        useproc = False
         # leafs can be calculated in parallel since there are no dependencies
         if self.nthreads == 1 and self.nprocs == 1:
             # same as

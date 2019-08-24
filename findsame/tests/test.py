@@ -61,7 +61,7 @@ def test_hash_file():
 
 
 def test_adjust_blocksize():
-    limit = 5 
+    limit = 5
     for blocksize in [1,2,3,4]:
         assert calc.adjust_blocksize(blocksize, limit) == 1
     for blocksize in [5,6,7]:
@@ -82,8 +82,8 @@ def test_hash_file_limit():
         for fn,hsh in hashes.items():
             assert calc.hash_file(fn, blocksize=bs) == hsh
             for limit in [400, 401, 433, 600]:
-                val = calc.hash_file_limit(fn, 
-                                           blocksize=bs, 
+                val = calc.hash_file_limit(fn,
+                                           blocksize=bs,
                                            limit=limit)
                 assert val == hsh, "failed: val={} hsh={} bs={} limit={}".format(
                     val, hsh, bs, limit)
@@ -94,7 +94,7 @@ def test_hash_file_limit():
                 calc.hash_file_limit(file_200_a, limit=limit, blocksize=bs) == \
                 calc.hash_file_limit(file_200_a_200_b, limit=limit, blocksize=bs) == \
                 hashlib.sha1(b'a'*limit).hexdigest()
-        
+
 
 def _preproc_json_with_hash(val, ref_fn):
     val = json.loads(val)
@@ -112,20 +112,20 @@ def _preproc_json(val, ref_fn):
 
 def test_exe_stdout():
     preproc_func = _preproc_json
-    cases = [('json_with_hash', '-o2', _preproc_json_with_hash, ''), 
+    cases = [('json_with_hash', '-o2', _preproc_json_with_hash, ''),
              ('json', '-o1', _preproc_json, '| jq sort'),
              ('json', '', _preproc_json, '| jq sort'),
              ]
     for name, outer_opts, preproc_func, post in cases:
         # test all combos only once which are not related to output formatting
         if name == 'json_with_hash':
-            opts_lst = ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K', '-l 128K', 
+            opts_lst = ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K', '-l 128K',
                         '-b 99K -l 500K']
         else:
             opts_lst = ['']
         for opts in opts_lst:
             exe = '{here}/../../bin/findsame {outer_opts} ' \
-                  '{opts}'.format(here=here, 
+                  '{opts}'.format(here=here,
                                   opts=opts,
                                   outer_opts=outer_opts)
             for args in ['data', 'data/*']:
@@ -154,7 +154,7 @@ def test_jq():
         res = []
         for outopt in ['-o1', '-o2']:
             cmd = '{here}/../../bin/findsame {data} {outopt} ' \
-                  '| {jq_cmd}'.format(here=here, 
+                  '| {jq_cmd}'.format(here=here,
                                       data=data,
                                       outopt=outopt,
                                       jq_cmd=jq_cmd)
@@ -177,22 +177,43 @@ def test_lazy():
     class Foo:
         def __init__(self):
             pass
-        
+
         def _get_prop(self):
             return 'prop'
 
         @co.lazyprop
         def prop(self):
             return self._get_prop()
-    
+
     foo = Foo()
     assert foo.prop == 'prop'
     foo.prop = None
     assert foo.prop is None
-    # force re-evaluation 
+    # force re-evaluation
     del foo.prop
     assert foo.prop == 'prop'
     # assign random value, _get_prop() is not called
     val = 37847128
     foo.prop = val
     assert foo.prop == val
+
+
+def test_walk_files():
+    d = pj(os.path.dirname(__file__), 'data')
+    # all files in test data, includes links, note that
+    #   os.path.isfile(<a link>)
+    # is True !
+    x = [pj(r,f) for r,_,fs in os.walk(d) for f in fs]
+    assert len(x) > 0
+    for fn in x:
+        assert os.path.exists(fn)
+        assert os.path.isfile(fn)
+    sx2 = set()
+    for r,_,fs in calc.MerkleTree.walk_files(x):
+        for f in fs:
+            fn = pj(r,f)
+            sx2.add(fn)
+            assert os.path.exists(fn)
+            assert os.path.isfile(fn)
+    sx = set(x)
+    assert sx == sx2, sx - sx2
