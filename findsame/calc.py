@@ -156,16 +156,16 @@ def split_path(path):
 #  ('test/a/d/e', [], ['file2'])]
 
 class Element:
-    def __init__(self, name='noname'):
+    def __init__(self, path=None):
         self.kind = None
-        self.name = name
+        self.path = path
 
     def __repr__(self):
-        return f"{self.kind}:{self.name}"
+        return f"{self.kind}:{self.path}"
 
     @co.lazyprop
     def fpr(self):
-        co.debug_msg(f"fpr: {self.name}")
+        co.debug_msg(f"fpr: {self.path}")
         return self._get_fpr()
 
     def _get_fpr(self):
@@ -205,13 +205,11 @@ class Leaf(Element):
     def __init__(self, *args, fn=None, fpr_func=hash_file, **kwds):
         super().__init__(*args, **kwds)
         self.kind = 'leaf'
-        # XXX rm that, is the same as self.name, use name or rename self.name
-        # -> self.path or smth
         self.fn = fn
         self.fpr_func = fpr_func
 
     def _get_fpr(self):
-        return self.fpr_func(self.fn)
+        return self.fpr_func(self.path)
 
 
 class MerkleTree:
@@ -268,7 +266,7 @@ class MerkleTree:
             # make sure os.path.dirname() returns the parent dir
             if root.endswith('/'):
                 root = root[:-1]
-            node = Node(name=root, childs=[])
+            node = Node(path=root, childs=[])
             for base in files:
                 fn = os.path.join(root, base)
                 co.debug_msg(f"build_tree: {fn}")
@@ -277,7 +275,7 @@ class MerkleTree:
                     co.debug_msg(f"skip link: {fn}")
                     continue
                 assert os.path.isfile(fn)
-                leaf = Leaf(name=fn, fn=fn, fpr_func=self.leaf_fpr_func)
+                leaf = Leaf(path=fn, fpr_func=self.leaf_fpr_func)
                 node.add_child(leaf)
                 self.leafs[fn] = leaf
             # add node as child to parent node
@@ -339,7 +337,7 @@ class MerkleTree:
         # need to extend the lazyprop decorator anyway).
         if useproc and self.share_leafs:
             for leaf in self.leafs.values():
-                leaf.fpr = self.leaf_fprs[leaf.name]
+                leaf.fpr = self.leaf_fprs[leaf.path]
 
         # v.fpr attribute access triggers recursive fpr calculation for all
         # nodes. For only kicking off the calculation, it would be sufficient
