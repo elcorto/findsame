@@ -24,5 +24,5 @@ setup(
     keywords='same files directories merkle tree hash',
     packages=find_packages(),
     install_requires=open('requirements.txt').read().splitlines(),
-    scripts=['{}/{}'.format(bindir, script) for script in os.listdir(bindir)]
+    scripts=[f'{bindir}/{script}' for script in os.listdir(bindir)]
 )

@@ -25,9 +25,9 @@ def calc_fprs(files_dirs, cfg):
             file_fprs.update(tree.leaf_fprs)
             dir_fprs.update(tree.node_fprs)
         elif _islink:
-            co.debug_msg("skip link: {}".format(path))
+            co.debug_msg(f"skip link: {path}")
         else:
-            raise Exception("unkown file/dir type for: {}".format(path))
+            raise Exception(f"unkown file/dir type for: {path}")
 
     # leaf_fprs, dir_fprs:
     #   {path1: fprA,
@@ -74,9 +74,9 @@ def assemble_result(file_store, dir_store, cfg):
                     if functools.reduce(lambda x,y: x == y == 1, diffs):
                         continue
                 if hsh == empty:
-                    typ = '{}:empty'.format(kind)
+                    typ = f'{kind}:empty'
                 else:
-                    typ = '{}'.format(kind)
+                    typ = f'{kind}'
                 typ_paths = hsh_dct.get(typ, []) + paths
                 hsh_dct.update({typ: typ_paths})
                 result.update({hsh: hsh_dct})
@@ -85,8 +85,7 @@ def assemble_result(file_store, dir_store, cfg):
     elif cfg.outmode == 2:
         return result
     else:
-        raise Exception("illegal value for "
-                        "outmode: {}".format(cfg.outmode))
+        raise Exception(f"illegal value for outmode: {cfg.outmode}")
 
 
 def main(files_dirs, cfg):

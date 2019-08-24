@@ -24,7 +24,7 @@ HASHFUNC = hashlib.sha1
 
 
 def hashsum(x):
-    """SHA1 hash of a string."""
+    """Hash of a string. Uses HASHFUNC."""
     return HASHFUNC(x.encode()).hexdigest()
 
 
@@ -160,11 +160,11 @@ class Element:
         self.name = name
 
     def __repr__(self):
-        return "{}:{}".format(self.kind, self.name)
+        return f"{self.kind}:{self.name}"
 
     @co.lazyprop
     def fpr(self):
-        co.debug_msg("fpr: {}".format(self.name))
+        co.debug_msg(f"fpr: {self.name}")
         return self._get_fpr()
 
     def _get_fpr(self):
@@ -173,7 +173,7 @@ class Element:
 
 class Node(Element):
     def __init__(self, *args, childs=None, **kwds):
-        super(Node, self).__init__(*args, **kwds)
+        super().__init__(*args, **kwds)
         self.kind = 'node'
         self.childs = childs
 
@@ -203,7 +203,7 @@ class Node(Element):
 
 class Leaf(Element):
     def __init__(self, *args, fn=None, fpr_func=hash_file, **kwds):
-        super(Leaf, self).__init__(*args, **kwds)
+        super().__init__(*args, **kwds)
         self.kind = 'leaf'
         self.fn = fn
         self.fpr_func = fpr_func
@@ -240,7 +240,7 @@ class MerkleTree:
             node = Node(name=root, childs=[])
             for base in files:
                 fn = os.path.join(root, base)
-                co.debug_msg("build_tree: {}".format(fn))
+                co.debug_msg(f"build_tree: {fn}")
                 # skipping links
                 if os.path.exists(fn) and os.path.isfile(fn) \
                         and not os.path.islink(fn):
@@ -248,7 +248,7 @@ class MerkleTree:
                     node.add_child(leaf)
                     leafs[fn] = leaf
                 else:
-                    co.debug_msg("skip link: {}".format(fn))
+                    co.debug_msg(f"skip link: {fn}")
             # add node as child to parent node, relies on top-down os.walk
             # root        = /foo/bar/baz
             # parent_root = /foo/bar

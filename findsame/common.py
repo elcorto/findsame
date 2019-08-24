@@ -71,7 +71,7 @@ def invert_dict(dct):
 
 def dict_equal(aa, bb):
     if set(aa.keys()) != set(bb.keys()):
-        print("keys not equal:\naa: {}\nbb: {}".format(aa.keys(), bb.keys()))
+        print(f"keys not equal:\naa: {aa.keys()}\nbb: {bb.keys()}")
         return False
     for akey, aval in aa.items():
         xx = aval
@@ -81,7 +81,7 @@ def dict_equal(aa, bb):
                 return False
         else:
             if not xx == yy:
-                print("vals not equal:\naa: {}\nbb: {}".format(xx, yy))
+                print(f"vals not equal:\naa: {xx}\nbb: {yy}")
                 return False
     return True
 
