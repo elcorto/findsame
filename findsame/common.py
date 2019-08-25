@@ -1,4 +1,6 @@
-import sys, functools
+import sys
+import functools
+from collections import defaultdict
 from findsame import config
 
 cfg = config.getcfg()

@@ -15,6 +15,8 @@ sort the output, as well as the ref_output generated with python2.
 
 import os
 import hashlib
+import functools
+import itertools
 from collections import defaultdict
 ##from multiprocessing import Pool # same as ProcessPoolExecutor
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
@@ -202,16 +204,18 @@ class Node(Element):
 
 
 class Leaf(Element):
-    def __init__(self, *args, fn=None, fpr_func=hash_file, **kwds):
+    def __init__(self, *args, fpr_func=hash_file, **kwds):
         super().__init__(*args, **kwds)
         self.kind = 'leaf'
-        self.fn = fn
         self.fpr_func = fpr_func
 
     def _get_fpr(self):
         return self.fpr_func(self.path)
 
 
+# XXX check whether we can change leafs and nodes from dict to a list, I think
+# we never iterate over the dict and use the keys (which is path, also in each
+# Element again)
 class FileDirTree:
     """File(leaf) + dir(node) part of a Merkle tree. No hashes. May consist of
     multiple independent sub-graphs (e.g. if data is brought in by updata()),
@@ -290,17 +294,14 @@ class FileDirTree:
 
 
 class MerkleTree:
-    def __init__(self, tree, calc=True, leaf_fpr_func=hash_file,
-                 cfg=None):
+    def __init__(self, tree, calc=True, cfg=None):
         self.nprocs = cfg.nprocs
         self.nthreads = cfg.nthreads
         self.tree = tree
+        self.cfg = cfg
         # Change only for benchmarks and debugging, should always be True in
         # production
         self.share_leafs = cfg.share_leafs
-
-        for leaf in self.tree.leafs.values():
-            leaf.fpr_func = leaf_fpr_func
 
         if calc:
             self.calc_fprs()
@@ -312,7 +313,7 @@ class MerkleTree:
     def _worker(kv):
         return kv[0], kv[1].fpr
 
-    def calc_fprs(self):
+    def _calc_fprs(self):
         """Trigger recursive fpr calculation."""
         useproc = False
         # leafs can be calculated in parallel since there are no dependencies
@@ -362,20 +363,96 @@ class MerkleTree:
         # explicitely. lazyprop makes sure we don't do anything twice.
         self.node_fprs = dict((k,v.fpr) for k,v in self.tree.nodes.items())
 
+    def set_leaf_fpr_func(self, limit):
+        co.debug_msg(f"auto_limit: limit={co.size2str(limit)}")
+        bs = adjust_blocksize(self.cfg.blocksize, limit)
+        if limit is None:
+            leaf_fpr_func = functools.partial(hash_file,
+                                              blocksize=bs)
+        else:
+            leaf_fpr_func = functools.partial(hash_file_limit_core,
+                                              blocksize=bs,
+                                              limit=limit)
+
+        for leaf in self.tree.leafs.values():
+            leaf.fpr_func = leaf_fpr_func
+
     # leaf_fprs, node_fprs:
     #   {path1: fprA,
     #    path2: fprA,
     #    path3: fprB,
+    #    path4: fprC,
+    #    path5: fprD,
+    #    path6: fprD,
+    #    path7: fprD,
     #    ...}
     #
     # inverse_*_fprs:
     #    fprA: [path1, path2],
     #    fprB: [path3],
+    #    fprC: [path4],
+    #    fprD: [path5, path6, path7],
     #    ...}
-    @co.lazyprop
     def inverse_leaf_fprs(self):
         return co.invert_dict(self.leaf_fprs)
 
-    @co.lazyprop
     def inverse_node_fprs(self):
         return co.invert_dict(self.node_fprs)
+
+    # XXX maybe set comparisons are costly, maybe just retun len(set(...)) even
+    # though there may be corner cases during iteration where len is the same
+    # but sets are different, e.g. when elements are swapped
+    def _same_paths_merged(self):
+        """Helper for auto limit iteration. We only need a measure of the total
+        number of same-fpr elements (leafs and nodes), since that must converge
+        when increasing limit. That is why we lump all of them together into a
+        single set.
+
+        Notes
+        -----
+        spm_*
+            {path1, path2, path5, path6, path7}
+        """
+        merge = lambda inv_dct: set(itertools.chain(*(pp for pp in
+            inv_dct.values() if len(pp)>1)))
+        spm_nodes = merge(self.inverse_node_fprs())
+        spm_leafs = merge(self.inverse_leaf_fprs())
+        spm = spm_nodes ^ spm_leafs
+        return spm_nodes, spm_leafs, spm
+
+    def calc_fprs(self):
+        max_limit = max(os.path.getsize(leaf.path) for leaf in self.tree.leafs.values())
+        if self.cfg.limit == 'auto':
+            def itr(limit):
+                yield limit
+                while True:
+                    limit = limit * self.cfg.auto_limit_increase_fac
+                    if limit <= max_limit:
+                        yield limit
+                    else:
+                        co.debug_msg("auto_limit: limit > max file size, stop")
+                        break
+            limit_itr = itr(self.cfg.auto_limit_min)
+            self.set_leaf_fpr_func(next(limit_itr))
+            self._calc_fprs()
+            spm_nodes, spm_leafs, spm = self._same_paths_merged()
+            spm_old = spm
+            # prevent early convergence
+            spm_first = spm
+            co.debug_msg(f"auto_limit: #same items = {len(spm)}")
+            for limit in limit_itr:
+                for path in spm_nodes:
+                    del self.tree.nodes[path].fpr
+                for path in spm_leafs:
+                    del self.tree.leafs[path].fpr
+                self.set_leaf_fpr_func(limit)
+                self._calc_fprs()
+                spm_nodes, spm_leafs, spm = self._same_paths_merged()
+                co.debug_msg(f"auto_limit: #same items = {len(spm)}")
+                if spm_old == spm and spm != spm_first:
+                    break
+                else:
+                    spm_old = spm
+        else:
+            self.set_leaf_fpr_func(self.cfg.limit)
+            self._calc_fprs()

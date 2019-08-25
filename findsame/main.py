@@ -2,18 +2,9 @@ import functools, os
 from findsame import common as co
 from findsame import calc
 
-
-def get_merkle_tree(files_dirs, cfg):
-    if cfg.limit is None:
-        file_fpr_func = functools.partial(calc.hash_file,
-                                          blocksize=cfg.blocksize)
-    else:
-        file_fpr_func = functools.partial(calc.hash_file_limit_core,
-                                          blocksize=cfg.blocksize,
-                                          limit=cfg.limit)
+def get_tree(files_dirs):
     files = []
     dirs = []
-
     for path in files_dirs:
         # skip links
         if os.path.islink(path):
@@ -30,8 +21,10 @@ def get_merkle_tree(files_dirs, cfg):
     for dr in dirs:
         dt = calc.FileDirTree(dr=dr)
         tree.update(dt)
+    return tree
 
-    return calc.MerkleTree(tree, calc=True, leaf_fpr_func=file_fpr_func, cfg=cfg)
+def get_merkle_tree(files_dirs, cfg):
+    return calc.MerkleTree(get_tree(files_dirs), calc=True, cfg=cfg)
 
 
 def assemble_result(merkle_tree, cfg):
@@ -42,8 +35,8 @@ def assemble_result(merkle_tree, cfg):
     #    ...}
     result = dict()
     empty = calc.hashsum('')
-    for kind, inv_fprs in [('dir', merkle_tree.inverse_node_fprs),
-                           ('file', merkle_tree.inverse_leaf_fprs)]:
+    for kind, inv_fprs in [('dir', merkle_tree.inverse_node_fprs()),
+                           ('file', merkle_tree.inverse_leaf_fprs())]:
         for hsh, paths in inv_fprs.items():
             hsh_dct = result.get(hsh, {})
             # exclude single items, only multiple fprs for now (hence the

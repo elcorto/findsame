@@ -22,10 +22,13 @@ if __name__ == '__main__':
                              '[default: %(default)s]')
     parser.add_argument('-l', '--limit',
                         default=co.size2str(cfg.limit),
-                        help='read limit (bytes), same units as BLOCKSIZE, '
+                        help='read limit (bytes or "auto"), same units as BLOCKSIZE, '
                              'calculate hash only over the first LIMIT '
                              'bytes, makes things go faster for may large '
                              'files, try 500K [default: %(default)s]')
+    parser.add_argument('-L', '--auto-limit-min',
+                        default=co.size2str(cfg.auto_limit_min),
+                        help='[default: %(default)s]')
     parser.add_argument('-p', '--nprocs',
                         default=1, type=int,
                         help='number of parallel processes [default: %(default)s]')
@@ -43,12 +46,14 @@ if __name__ == '__main__':
     cfg.nprocs = args.nprocs
     cfg.nthreads = args.nthreads
     cfg.blocksize = co.str2size(args.blocksize)
-    cfg.limit = co.str2size(args.limit)
+    cfg.limit = co.str2size(args.limit) if args.limit != 'auto' else args.limit
+    cfg.auto_limit_min = co.str2size(args.auto_limit_min)
     cfg.verbose = args.verbose
     cfg.outmode = args.outmode
 
-    # modify here once since we use hash_file_limit_core w/o adjustment in inner
-    # loops b/c of speed
-    cfg.blocksize = calc.adjust_blocksize(cfg.blocksize, cfg.limit)
+    if cfg.limit != 'auto':
+        # modify here once since we use hash_file_limit_core w/o adjustment in inner
+        # loops b/c of speed
+        cfg.blocksize = calc.adjust_blocksize(cfg.blocksize, cfg.limit)
 
     print(json.dumps(main.main(files_dirs=args.files_dirs, cfg=cfg)))

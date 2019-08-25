@@ -120,7 +120,7 @@ def test_exe_stdout():
         # test all combos only once which are not related to output formatting
         if name == 'json_with_hash':
             opts_lst = ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K', '-l 128K',
-                        '-b 99K -l 500K']
+                        '-b 99K -l 500K', '-l auto', '-l auto -L 8K']
         else:
             opts_lst = ['']
         for opts in opts_lst:
