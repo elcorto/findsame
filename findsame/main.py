@@ -3,7 +3,7 @@ from findsame import common as co
 from findsame import calc
 
 
-def calc_fprs(files_dirs, cfg):
+def get_merkle_tree(files_dirs, cfg):
     if cfg.limit is None:
         file_fpr_func = functools.partial(calc.hash_file,
                                           blocksize=cfg.blocksize)
@@ -11,40 +11,30 @@ def calc_fprs(files_dirs, cfg):
         file_fpr_func = functools.partial(calc.hash_file_limit_core,
                                           blocksize=cfg.blocksize,
                                           limit=cfg.limit)
-    file_fprs = dict()
-    dir_fprs = dict()
+    files = []
+    dirs = []
+
     for path in files_dirs:
-        _islink = os.path.islink(path)
         # skip links
-        if os.path.isfile(path) and not _islink:
-            file_fprs[path] = file_fpr_func(path)
-        elif os.path.isdir(path):
-            tree = calc.MerkleTree(path, calc=True,
-                                   leaf_fpr_func=file_fpr_func,
-                                   cfg=cfg)
-            file_fprs.update(tree.leaf_fprs)
-            dir_fprs.update(tree.node_fprs)
-        elif _islink:
+        if os.path.islink(path):
             co.debug_msg(f"skip link: {path}")
+            continue
+        if os.path.isfile(path):
+            files.append(path)
+        elif os.path.isdir(path):
+            dirs.append(path)
         else:
             raise Exception(f"unkown file/dir type for: {path}")
 
-    # leaf_fprs, dir_fprs:
-    #   {path1: fprA,
-    #    path2: fprA,
-    #    path3: fprB,
-    #    ...}
-    #
-    # file_store, dir_store:
-    #    fprA: [path1, path2],
-    #    fprB: [path3],
-    #    ...}
-    file_store = co.invert_dict(file_fprs)
-    dir_store = co.invert_dict(dir_fprs)
-    return file_store, dir_store
+    tree = calc.FileDirTree(files=files)
+    for dr in dirs:
+        dt = calc.FileDirTree(dr=dr)
+        tree.update(dt)
+
+    return calc.MerkleTree(tree, calc=True, leaf_fpr_func=file_fpr_func, cfg=cfg)
 
 
-def assemble_result(file_store, dir_store, cfg):
+def assemble_result(merkle_tree, cfg):
     # result:
     #   {fprA: {typX: [path1, path2],
     #           typY: [path3]},
@@ -52,8 +42,9 @@ def assemble_result(file_store, dir_store, cfg):
     #    ...}
     result = dict()
     empty = calc.hashsum('')
-    for kind, store in [('dir', dir_store), ('file', file_store)]:
-        for hsh, paths in store.items():
+    for kind, inv_fprs in [('dir', merkle_tree.inverse_node_fprs),
+                           ('file', merkle_tree.inverse_leaf_fprs)]:
+        for hsh, paths in inv_fprs.items():
             hsh_dct = result.get(hsh, {})
             # exclude single items, only multiple fprs for now (hence the
             # name find*same* :)
@@ -95,4 +86,4 @@ def main(files_dirs, cfg):
     files_dirs : seq
         list of strings w/ files and/or dirs
     """
-    return assemble_result(*calc_fprs(files_dirs, cfg), cfg)
+    return assemble_result(get_merkle_tree(files_dirs, cfg), cfg)

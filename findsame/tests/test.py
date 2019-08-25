@@ -209,7 +209,7 @@ def test_walk_files():
         assert os.path.exists(fn)
         assert os.path.isfile(fn)
     sx2 = set()
-    for r,_,fs in calc.MerkleTree.walk_files(x):
+    for r,_,fs in calc.FileDirTree.walk_files(x):
         for f in fs:
             fn = pj(r,f)
             sx2.add(fn)

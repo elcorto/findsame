@@ -212,21 +212,19 @@ class Leaf(Element):
         return self.fpr_func(self.path)
 
 
-class MerkleTree:
-    def __init__(self, dr=None, files=None, calc=True, leaf_fpr_func=hash_file,
-                 cfg=None):
-        self.nprocs = cfg.nprocs
-        self.nthreads = cfg.nthreads
+class FileDirTree:
+    """File(leaf) + dir(node) part of a Merkle tree. No hashes. May consist of
+    multiple independent sub-graphs (e.g. if data is brought in by updata()),
+    thus there is no single "top" element which could be used for recursive
+    hash calculation. But we do explicit leaf hash calculation in parallel
+    anyway in MerkleTree, so no need for recursive magic.
+    """
+
+    def __init__(self, dr=None, files=None):
         self.dr = dr
         self.files = files
         assert [files, dr].count(None) == 1, "dr or files must be None"
-        # Change only for benchmarks and debugging, should always be True in
-        # production
-        self.share_leafs = cfg.share_leafs
-        self.leaf_fpr_func = leaf_fpr_func
         self.build_tree()
-        if calc:
-            self.calc_fprs()
 
     @staticmethod
     def walk_files(files):
@@ -261,7 +259,6 @@ class MerkleTree:
         """
         self.nodes = {}
         self.leafs = {}
-        self.top = None
         for root, _, files in self.walker():
             # make sure os.path.dirname() returns the parent dir
             if root.endswith('/'):
@@ -275,7 +272,7 @@ class MerkleTree:
                     co.debug_msg(f"skip link: {fn}")
                     continue
                 assert os.path.isfile(fn)
-                leaf = Leaf(path=fn, fpr_func=self.leaf_fpr_func)
+                leaf = Leaf(path=fn)
                 node.add_child(leaf)
                 self.leafs[fn] = leaf
             # add node as child to parent node
@@ -285,8 +282,28 @@ class MerkleTree:
             parent_root = os.path.dirname(root)
             if parent_root in self.nodes.keys():
                 self.nodes[parent_root].add_child(node)
-            if self.top is None:
-                self.top = node
+
+    def update(self, other):
+        for name in ['nodes', 'leafs']:
+            attr = getattr(self, name)
+            attr.update(getattr(other, name))
+
+
+class MerkleTree:
+    def __init__(self, tree, calc=True, leaf_fpr_func=hash_file,
+                 cfg=None):
+        self.nprocs = cfg.nprocs
+        self.nthreads = cfg.nthreads
+        self.tree = tree
+        # Change only for benchmarks and debugging, should always be True in
+        # production
+        self.share_leafs = cfg.share_leafs
+
+        for leaf in self.tree.leafs.values():
+            leaf.fpr_func = leaf_fpr_func
+
+        if calc:
+            self.calc_fprs()
 
     # pool.map(lambda kv: (k, v.fpr), ...) in calc_fprs() doesn't work,
     # error is "Can't pickle ... lambda ...", same with defining _worker()
@@ -317,7 +334,7 @@ class MerkleTree:
             useproc = True
         with getpool() as pool:
             self.leaf_fprs = dict(pool.map(self._worker,
-                                           self.leafs.items(),
+                                           self.tree.leafs.items(),
                                            chunksize=1))
 
         # The node_fprs calculation below causes a slowdown with
@@ -336,11 +353,29 @@ class MerkleTree:
         # don't need to test if leaf.fpr is already populated (for that, we'd
         # need to extend the lazyprop decorator anyway).
         if useproc and self.share_leafs:
-            for leaf in self.leafs.values():
+            for leaf in self.tree.leafs.values():
                 leaf.fpr = self.leaf_fprs[leaf.path]
 
-        # v.fpr attribute access triggers recursive fpr calculation for all
-        # nodes. For only kicking off the calculation, it would be sufficient
-        # to call top.fpr . However, we also put all node fprs in a dict here,
-        # so this is implicit.
-        self.node_fprs = dict((k,v.fpr) for k,v in self.nodes.items())
+        # v.fpr attribute access triggers recursive fpr calculation in all
+        # leafs and nodes connected to this one. Since we do not assume the
+        # exietence of a single top node, we iterate thru all nodes
+        # explicitely. lazyprop makes sure we don't do anything twice.
+        self.node_fprs = dict((k,v.fpr) for k,v in self.tree.nodes.items())
+
+    # leaf_fprs, node_fprs:
+    #   {path1: fprA,
+    #    path2: fprA,
+    #    path3: fprB,
+    #    ...}
+    #
+    # inverse_*_fprs:
+    #    fprA: [path1, path2],
+    #    fprB: [path3],
+    #    ...}
+    @co.lazyprop
+    def inverse_leaf_fprs(self):
+        return co.invert_dict(self.leaf_fprs)
+
+    @co.lazyprop
+    def inverse_node_fprs(self):
+        return co.invert_dict(self.node_fprs)
