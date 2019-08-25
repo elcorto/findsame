@@ -59,14 +59,11 @@ def invert_dict(dct):
          fprB: [path3],
          ...}
     """
-    store = dict()
-    for path,hsh in dct.items():
-        if hsh in store.keys():
-            store[hsh].append(path)
-        else:
-            store[hsh] = [path]
+    inv = defaultdict(list)
+    for key,val in dct.items():
+        inv[val].append(key)
     # sort to force reproducible results
-    return dict((k,sorted(v)) for k,v in store.items())
+    return dict((k,sorted(v)) for k,v in inv.items())
 
 
 def dict_equal(aa, bb):
