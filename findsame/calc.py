@@ -20,9 +20,11 @@ import itertools
 from collections import defaultdict
 ##from multiprocessing import Pool # same as ProcessPoolExecutor
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+
 from findsame import common as co
 from findsame.parallel import ProcessAndThreadPoolExecutor, \
     SequentialPoolExecutor
+from findsame.config import cfg
 
 HASHFUNC = hashlib.sha1
 
@@ -294,11 +296,10 @@ class FileDirTree:
 
 
 class MerkleTree:
-    def __init__(self, tree, calc=True, cfg=None):
+    def __init__(self, tree, calc=True):
         self.nprocs = cfg.nprocs
         self.nthreads = cfg.nthreads
         self.tree = tree
-        self.cfg = cfg
         # Change only for benchmarks and debugging, should always be True in
         # production
         self.share_leafs = cfg.share_leafs
@@ -365,7 +366,7 @@ class MerkleTree:
 
     def set_leaf_fpr_func(self, limit):
         co.debug_msg(f"auto_limit: limit={co.size2str(limit)}")
-        bs = adjust_blocksize(self.cfg.blocksize, limit)
+        bs = adjust_blocksize(cfg.blocksize, limit)
         if limit is None:
             leaf_fpr_func = functools.partial(hash_file,
                                               blocksize=bs)
@@ -422,17 +423,17 @@ class MerkleTree:
 
     def calc_fprs(self):
         max_limit = max(os.path.getsize(leaf.path) for leaf in self.tree.leafs.values())
-        if self.cfg.limit == 'auto':
+        if cfg.limit == 'auto':
             def itr(limit):
                 yield limit
                 while True:
-                    limit = limit * self.cfg.auto_limit_increase_fac
+                    limit = limit * cfg.auto_limit_increase_fac
                     if limit <= max_limit:
                         yield limit
                     else:
                         co.debug_msg("auto_limit: limit > max file size, stop")
                         break
-            limit_itr = itr(self.cfg.auto_limit_min)
+            limit_itr = itr(cfg.auto_limit_min)
             self.set_leaf_fpr_func(next(limit_itr))
             self._calc_fprs()
             spm_nodes, spm_leafs, spm = self._same_paths_merged()
@@ -454,5 +455,5 @@ class MerkleTree:
                 else:
                     spm_old = spm
         else:
-            self.set_leaf_fpr_func(self.cfg.limit)
+            self.set_leaf_fpr_func(cfg.limit)
             self._calc_fprs()

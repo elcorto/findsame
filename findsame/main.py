@@ -1,6 +1,10 @@
-import functools, os
+import functools
+import os
+
 from findsame import common as co
 from findsame import calc
+from findsame.config import cfg
+
 
 def get_tree(files_dirs):
     files = []
@@ -23,11 +27,11 @@ def get_tree(files_dirs):
         tree.update(dt)
     return tree
 
-def get_merkle_tree(files_dirs, cfg):
-    return calc.MerkleTree(get_tree(files_dirs), calc=True, cfg=cfg)
+def get_merkle_tree(files_dirs):
+    return calc.MerkleTree(get_tree(files_dirs), calc=True)
 
 
-def assemble_result(merkle_tree, cfg):
+def assemble_result(merkle_tree):
     # result:
     #   {fprA: {typX: [path1, path2],
     #           typY: [path3]},
@@ -72,11 +76,11 @@ def assemble_result(merkle_tree, cfg):
         raise Exception(f"illegal value for outmode: {cfg.outmode}")
 
 
-def main(files_dirs, cfg):
+def main(files_dirs):
     """
     Parameters
     ----------
     files_dirs : seq
         list of strings w/ files and/or dirs
     """
-    return assemble_result(get_merkle_tree(files_dirs, cfg), cfg)
+    return assemble_result(get_merkle_tree(files_dirs))

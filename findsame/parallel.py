@@ -1,6 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, \
     Executor
-import time, itertools
+import time
+import itertools
 
 # TODO: investigate Executor.map(..., chunksize=N) with N>1 (default N=1)
 

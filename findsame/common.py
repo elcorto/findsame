@@ -1,9 +1,9 @@
 import sys
 import functools
 from collections import defaultdict
-from findsame import config
 
-cfg = config.getcfg()
+from findsame.config import cfg
+
 
 KiB = 1024
 MiB = KiB**2

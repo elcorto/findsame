@@ -2,10 +2,10 @@
 
 import argparse, json
 from multiprocessing import cpu_count
+
 from findsame import common as co
 from findsame import main, calc
-from findsame import config
-cfg = config.getcfg()
+from findsame.config import cfg
 
 
 if __name__ == '__main__':
@@ -56,4 +56,4 @@ if __name__ == '__main__':
         # loops b/c of speed
         cfg.blocksize = calc.adjust_blocksize(cfg.blocksize, cfg.limit)
 
-    print(json.dumps(main.main(files_dirs=args.files_dirs, cfg=cfg)))
+    print(json.dumps(main.main(files_dirs=args.files_dirs)))

@@ -1,9 +1,8 @@
 import subprocess, os, json, random, sys, hashlib
 from findsame import calc
 from findsame import common as co
-from findsame import config
+from findsame.config import cfg
 pj = os.path.join
-cfg = config.getcfg()
 
 
 here = os.path.abspath(os.path.dirname(__file__))
