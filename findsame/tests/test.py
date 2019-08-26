@@ -122,7 +122,7 @@ def test_cli():
         # case here.
         #
         # without hashes: We have test data file_200_a, file_200_a_200_b,
-        # file_200_a_800_b which are equal in the first 200 bytes, We test auto
+        # file_200_a_2000_b which are equal in the first 200 bytes, We test auto
         # limit iteration with -L 10: 10,20,40,80,160,320,640 -> limit=320
         # bytes will be the smallest limit where we start to see that the files
         # are different. A second iteration with doubled limit is performed and
