@@ -12,35 +12,39 @@ if __name__ == '__main__':
 
     desc = "Find same files and dirs based on file hashes."
     parser = argparse.ArgumentParser(description=desc)
-    parser.add_argument('files_dirs', nargs='+', metavar='file/dir',
-                        help='files and/or dirs to compare', default=[])
-    parser.add_argument('-b', '--blocksize',
+    parser.add_argument("files_dirs", nargs="+", metavar="file/dir",
+                        help="files and/or dirs to compare", default=[])
+    parser.add_argument("-b", "--blocksize",
                         default=co.size2str(cfg.blocksize),
-                        help='blocksize in hash calculation, '
-                             'use units K,M,G as in 100M, 218K or just '
-                             '1024 (bytes) '
-                             '[default: %(default)s]')
-    parser.add_argument('-l', '--limit',
+                        help="blocksize in hash calculation, "
+                             "use units K,M,G as in 100M, 218K or just "
+                             "1024 (bytes) "
+                             "[default: %(default)s]")
+    parser.add_argument("-l", "--limit",
                         default=co.size2str(cfg.limit),
-                        help='read limit (bytes or "auto"), same units as BLOCKSIZE, '
-                             'calculate hash only over the first LIMIT '
-                             'bytes, makes things go faster for may large '
-                             'files, try 500K [default: %(default)s]')
-    parser.add_argument('-L', '--auto-limit-min',
+                        help="read limit (bytes or 'auto'), if bytes then "
+                             "same units as for BLOCKSIZE apply, "
+                             "calculate hash only over the first LIMIT "
+                             "bytes, makes things go faster for may large "
+                             "files, try 500K [default: %(default)s], use "
+                             "'auto' to try to determine the smallest value "
+                             "necessary automatically")
+    parser.add_argument("-L", "--auto-limit-min",
                         default=co.size2str(cfg.auto_limit_min),
-                        help='[default: %(default)s]')
-    parser.add_argument('-p', '--nprocs',
+                        help="start value for auto LIMIT calculation when "
+                             "--limit auto is used [default: %(default)s]")
+    parser.add_argument("-p", "--nprocs",
                         default=1, type=int,
-                        help='number of parallel processes [default: %(default)s]')
-    parser.add_argument('-t', '--nthreads',
+                        help="number of parallel processes [default: %(default)s]")
+    parser.add_argument("-t", "--nthreads",
                         default=cpu_count(), type=int,
-                        help='threads per process [%(default)s]')
-    parser.add_argument('-o', '--outmode',
+                        help="threads per process [default: %(default)s]")
+    parser.add_argument("-o", "--outmode",
                         default=1, type=int,
-                        help='1: json, 2: json with hashes [default: %(default)s]')
-    parser.add_argument('-v', '--verbose',
-                        default=False, action='store_true',
-                        help='enable verbose/debugging output')
+                        help="1: json, 2: json with hashes [default: %(default)s]")
+    parser.add_argument("-v", "--verbose",
+                        default=False, action="store_true",
+                        help="enable verbose/debugging output")
     args = parser.parse_args()
 
     cfg.nprocs = args.nprocs
