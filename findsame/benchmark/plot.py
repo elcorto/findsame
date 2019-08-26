@@ -12,7 +12,7 @@ from psweep import psweep as ps
 
 
 def to_seq(arg):
-    if isinstance(arg, collections.Sequence) and not isinstance(arg, str):
+    if isinstance(arg, collections.abc.Sequence) and not isinstance(arg, str):
         return arg
     else:
         return [arg]

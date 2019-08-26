@@ -15,8 +15,8 @@ pj = os.path.join
 
 
 default_setup = textwrap.dedent("""
-    from findsame import main, config
-    cfg = config.getcfg()
+    from findsame import main
+    from findsame.config import cfg
     """)
 
 
@@ -39,7 +39,6 @@ def bytes_linspace(start, stop, num):
 def write(fn, size):
     """Write a single file of `size` in bytes to path `fn`."""
     data = b'x'*int(size)
-##    print("    write: {}".format(fn))
     with open(fn, 'wb') as fd:
         fd.write(data)
 
@@ -47,10 +46,9 @@ def write(fn, size):
 def write_single_files(testdir, sizes):
     """Wite ``len(sizes)`` files to ``{testdir}/filesize_{size}/file``. Each
     file has ``sizes[i]`` in bytes. Return a list of file names."""
-##    print("  write_single_files: sizes: {}".format(list(map(size2str, sizes))))
     files = []
     for filesize in sizes:
-        dr = pj(testdir, 'filesize_{}'.format(size2str(filesize)))
+        dr = pj(testdir, f'filesize_{size2str(filesize)}')
         os.makedirs(dr, exist_ok=True)
         fn = pj(dr, 'file')
         write(fn, filesize)
@@ -69,24 +67,23 @@ def write_file_groups(testdir, sizes, group_size=None):
         group_size = max(sizes)
     else:
         assert group_size >= max(sizes)
-##    print("  write_file_groups: group_size: {}".format(size2str(group_size)))
     group_dirs = []
     files = []
     for _filesize in sizes:
         filesize = int(_filesize)
         filesize_str = size2str(filesize)
-        dr = pj(testdir, 'filesize_{}'.format(filesize_str))
+        dr = pj(testdir, f'filesize_{filesize_str}')
         group_dirs.append(dr)
         if not os.path.exists(dr):
             os.makedirs(dr, exist_ok=True)
             nfiles = int(group_size) // filesize
             assert nfiles >= 1
             for idx in range(nfiles):
-                fn = pj(dr, 'file_{}'.format(idx))
+                fn = pj(dr, f'file_{idx}')
                 write(fn, filesize)
                 files.append(fn)
         else:
-            print('    dir already present: {}'.format(dr))
+            print(f'    dir already present: {dr}')
     return group_dirs, files
 
 
@@ -103,7 +100,6 @@ def write_collection(collection_size=GiB, min_size=128*KiB, tmpdir=None,
     This is used to create a syntetic real-wold-like file distribution on a
     system with many small and few large files.
     """
-##    print("  write_collection: collection_size: {}".format(size2str(collection_size)))
     group_size = int(collection_size/ngroups)
     assert group_size > 0
     filesize = bytes_logspace(min_size,group_size, ngroups)
@@ -127,7 +123,7 @@ def psweep_callback(dct, stmt=None, setup=None, ctx=None):
 def bench_main_blocksize_filesize(tmpdir, maxsize):
     stmt = textwrap.dedent("""
         cfg.update(dict(blocksize={blocksize}))
-        main.main({files_dirs}, cfg)
+        main.main({files_dirs})
         """)
     params = []
 
@@ -176,7 +172,7 @@ def bench_main_parallel(tmpdir, maxsize):
                         nthreads={nthreads},
                         nprocs={nprocs},
                         share_leafs={share_leafs}))
-        main.main({files_dirs}, cfg)
+        main.main({files_dirs})
         """)
     params = []
 
@@ -219,7 +215,7 @@ def bench_main_parallel_2d(tmpdir, maxsize):
         cfg.update(dict(blocksize={blocksize},
                         nthreads={nthreads},
                         nprocs={nprocs}))
-        main.main({files_dirs}, cfg)
+        main.main({files_dirs})
         """)
     params = []
 
@@ -292,7 +288,7 @@ with pool_map['{pool_type}']({nworkers}) as pool:
 
 
 def update(df1, df2):
-    return df1.append(df2, ignore_index=True)
+    return df1.append(df2, ignore_index=True, sort=False)
 
 
 # adapted from pwtools
@@ -367,9 +363,7 @@ if __name__ == '__main__':
                 return callback(p, stmt, setup)
 
             df = update(df, ps.run(func, params, poolsize=None, save=False))
-            ps.df_write(df, 'save_{}_up_to_{}_{}.json'.format(idx,
-                                                              bench_func.__name__,
-                                                              size2str(maxsize)),
+            ps.df_write(df, f'save_{idx}_up_to_{bench_func.__name__}_{size2str(maxsize)}.json',
                         fmt='json')
     backup(results)
     ps.df_write(df, results, fmt='json')
