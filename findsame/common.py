@@ -105,7 +105,7 @@ class lazyprop:
 
 def debug_msg(msg):
     if cfg.verbose:
-        sys.stderr.write(msg + "\n")
+        sys.stderr.write("DBG: " + msg + "\n")
 
 
 def called(func):
