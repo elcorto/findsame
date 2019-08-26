@@ -6,15 +6,15 @@ from findsame import calc
 from findsame.config import cfg
 
 
-def get_tree(files_dirs):
+def get_merkle_tree(files_dirs):
     files = []
     dirs = []
     for path in files_dirs:
-        # skip links
+        # skip links, note that isfile(<link>) is True, so we need to check
+        # islink first
         if os.path.islink(path):
             co.debug_msg(f"skip link: {path}")
-            continue
-        if os.path.isfile(path):
+        elif os.path.isfile(path):
             files.append(path)
         elif os.path.isdir(path):
             dirs.append(path)
@@ -25,10 +25,7 @@ def get_tree(files_dirs):
     for dr in dirs:
         dt = calc.FileDirTree(dr=dr)
         tree.update(dt)
-    return tree
-
-def get_merkle_tree(files_dirs):
-    return calc.MerkleTree(get_tree(files_dirs), calc=True)
+    return calc.MerkleTree(tree, calc=True)
 
 
 def assemble_result(merkle_tree):

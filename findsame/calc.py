@@ -273,7 +273,7 @@ class FileDirTree:
             for base in files:
                 fn = os.path.join(root, base)
                 co.debug_msg(f"build_tree: {fn}")
-                # skipping links
+                # skip links
                 if os.path.islink(fn):
                     co.debug_msg(f"skip link: {fn}")
                     continue
@@ -415,14 +415,15 @@ class MerkleTree:
             {path1, path2, path5, path6, path7}
         """
         merge = lambda inv_dct: set(itertools.chain(*(pp for pp in
-            inv_dct.values() if len(pp)>1)))
+                                                      inv_dct.values() if len(pp)>1)))
         spm_nodes = merge(self.inverse_node_fprs())
         spm_leafs = merge(self.inverse_leaf_fprs())
         spm = spm_nodes ^ spm_leafs
         return spm_nodes, spm_leafs, spm
 
     def calc_fprs(self):
-        max_limit = max(os.path.getsize(leaf.path) for leaf in self.tree.leafs.values())
+        max_limit = max(os.path.getsize(leaf.path) for leaf in
+                        self.tree.leafs.values())
         if cfg.limit == 'auto':
             def itr(limit):
                 yield limit
