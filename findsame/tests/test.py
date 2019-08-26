@@ -116,12 +116,23 @@ def test_exe_stdout():
              ('json', '', _preproc_json, '| jq sort'),
              ]
     for name, outer_opts, preproc_func, post in cases:
-        # test all combos only once which are not related to output formatting
+        # Test all combos only once which are not related to output formatting.
+        # json_with_hash: the hashes are the ones of the while file, so all
+        # limit (-l) values must be bigger than the biggest file, which is the
+        # case here.
+        #
+        # without hashes: We have test data file_200_a, file_200_a_200_b,
+        # file_200_a_800_b which are equal in the first 200 bytes, We test auto
+        # limit iteration with -L 10: 10,20,40,80,160,320,640 -> limit=320
+        # bytes will be the smallest limit where we start to see that the files
+        # are different. A second iteration with doubled limit if performed and
+        # if the number of same elements (now 0, before 2) doesn't change
+        # (still 0), we are converged.
         if name == 'json_with_hash':
             opts_lst = ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K', '-l 128K',
-                        '-b 99K -l 500K', '-l auto', '-l auto -L 8K']
+                        '-b 99K -l 500K']
         else:
-            opts_lst = ['']
+            opts_lst = ['-l auto', '-l auto -L 8K', '-l auto -L 10']
         for opts in opts_lst:
             exe = '{here}/../../bin/findsame {outer_opts} ' \
                   '{opts}'.format(here=here,
