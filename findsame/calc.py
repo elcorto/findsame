@@ -445,8 +445,10 @@ class MerkleTree:
             for limit in limit_itr:
                 for path in spm_nodes:
                     del self.tree.nodes[path].fpr
+                    co.debug_msg(f"auto_limit: del fpr: {path}")
                 for path in spm_leafs:
                     del self.tree.leafs[path].fpr
+                    co.debug_msg(f"auto_limit: del fpr: {path}")
                 self.set_leaf_fpr_func(limit)
                 self._calc_fprs()
                 spm_nodes, spm_leafs, spm = self._same_paths_merged()
