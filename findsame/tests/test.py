@@ -109,7 +109,7 @@ def _preproc_json(val, ref_fn):
     return val, ref, lambda x,y: x == y
 
 
-def test_exe_stdout():
+def test_cli():
     preproc_func = _preproc_json
     cases = [('json_with_hash', '-o2', _preproc_json_with_hash, ''),
              ('json', '-o1', _preproc_json, '| jq sort'),
@@ -125,7 +125,7 @@ def test_exe_stdout():
         # file_200_a_800_b which are equal in the first 200 bytes, We test auto
         # limit iteration with -L 10: 10,20,40,80,160,320,640 -> limit=320
         # bytes will be the smallest limit where we start to see that the files
-        # are different. A second iteration with doubled limit if performed and
+        # are different. A second iteration with doubled limit is performed and
         # if the number of same elements (now 0, before 2) doesn't change
         # (still 0), we are converged.
         if name == 'json_with_hash':
@@ -134,21 +134,27 @@ def test_exe_stdout():
         else:
             opts_lst = ['-l auto', '-l auto -L 8K', '-l auto -L 10']
         for opts in opts_lst:
-            exe = '{here}/../../bin/findsame {outer_opts} ' \
-                  '{opts}'.format(here=here,
-                                  opts=opts,
-                                  outer_opts=outer_opts)
+            exe = f'{here}/../../bin/findsame {outer_opts} {opts}'
             for args in ['data', 'data/*']:
-                cmd = '{exe} {here}/{args} {post}'.format(exe=exe, args=args,
-                                                          here=here, post=post)
+                cmd = f'{exe} {here}/{args} {post}'
                 print(cmd)
                 out = subprocess.check_output(cmd, shell=True)
                 out = out.decode()
                 out = out.replace(here + '/','')
                 print(out)
-                ref_fn = '{here}/ref_output_{name}'.format(here=here, name=name)
+                ref_fn = f'{here}/ref_output_{name}'
                 val, ref, comp = preproc_func(out, ref_fn)
                 assert comp(val, ref), "val:\n{}\nref:\n{}".format(val, ref)
+
+
+def test_auto_limit_cli():
+    # This is already covered in test_cli() since the result is [] and
+    # thus doesn't show up in canned reference results, but we test it
+    # explicitely here anyway .. because we can!
+    for opts in ["-l auto -L 10"]:
+        cmd = f'{here}/../../bin/findsame {opts} {here}/data/file_200_a*'
+        out = subprocess.check_output(cmd, shell=True).decode().strip()
+        assert out == '[]'
 
 
 def test_jq():
