@@ -8,6 +8,30 @@ directories as well, using a Merkle tree for directory hash calculation.
 To increase performance, we use parallel hash calculation and optional limits
 on to-be-hashed data.
 
+Install
+=======
+From pypi:
+
+.. code-block:: shell
+
+    $ pip3 install findsame
+
+Dev install of this repo:
+
+.. code-block:: shell
+
+    $ git clone ...
+    $ cd findsame
+    $ pip3 install -e .
+
+The core part (package ``findsame`` and the CLI ``bin/findsame``) have no
+external dependencies. If you want to run the benchmarks (see "Benchmarks"
+below), install some dependencies:
+
+.. code-block:: shell
+
+    $ pip3 install -r requirements_benchmark.txt
+
 Usage
 =====
 
@@ -47,7 +71,9 @@ Usage
 
 The output format is json, either with or without hashes (see ``--outmode``).
 Use `jq <https://stedolan.github.io/jq>`_ for pretty-printing. Example using
-the test suite data::
+the test suite data.
+
+.. code-block:: shell
 
     $ cd findsame/tests
     $ findsame data | jq .
@@ -157,15 +183,17 @@ file system (we use 8K).
 
 Tests
 =====
-Run ``nosetests3`` (maybe ``apt-get install python3-nose`` before (Debian)).
+Run ``nosetests3`` (maybe ``apt install python3-nose`` before (Debian)).
 
 Benchmarks
 ==========
 You may run the benchmark script to find the best blocksize and number threads
-and/or processes for hash calculations on your machine::
+and/or processes for hash calculations on your machine.
+
+.. code-block:: shell
 
     $ cd benchmark
-    $ rm -rf files pics *.json*; ./benchmark.py
+    $ ./clean.sh; ./benchmark.py
     $ ./plot.py
 
 This writes test files of various size to ``benchmark/files`` and runs a couple
@@ -203,7 +231,9 @@ Tested systems:
 More usage examples
 ===================
 
-Output with hashes (``-o 2``, default is ``-o 1``)::
+Output with hashes (``-o 2``, default is ``-o 1``):
+
+.. code-block:: shell
 
     $ findsame data -o2 | jq . | head -n20
     {
@@ -236,7 +266,15 @@ and ``jq`` is random.
 Post-processing is only limited by your ability to process json (using ``jq``,
 Python, ...).
 
-A common task is to find only groups of equal dirs::
+Count the total number of all equals:
+
+.. code-block:: shell
+
+    $ findsame data | jq '.[]|.[]|.[]' | wc -l
+
+A common task is to find only groups of equal dirs:
+
+.. code-block:: shell
 
     $ findsame data | jq '.[]|select(.dir)|.dir'
     [
@@ -245,7 +283,9 @@ A common task is to find only groups of equal dirs::
     ]
 
 This and all other ``jq`` commands work for both outmodes (``-o 1``, ``-o 2``).
-Now only the files::
+Now only the files:
+
+.. code-block:: shell
 
     $ findsame data | jq '.[]|select(.file)|.file'
     [
@@ -267,7 +307,9 @@ Now only the files::
 Another task is to find the first or *all but* the first elements in a group of
 same-hash files/dirs.
 
-Find first element::
+Find first element:
+
+.. code-block:: shell
 
     $ findsame data | jq '.[]|.[]|[.[0]]'
     [
@@ -289,7 +331,9 @@ Find first element::
       "data/dir1"
     ]
 
-or w/o the length-1 list::
+or w/o the length-1 list:
+
+.. code-block:: shell
 
     $ findsame data | jq '.[]|.[]|.[0]'
     "data/dir2/empty_dir"
@@ -300,7 +344,9 @@ or w/o the length-1 list::
     "data/dir1"
 
 
-All but first::
+All but first:
+
+.. code-block:: shell
 
     $ findsame data | jq '.[]|.[]|.[1:]'
     [
@@ -331,7 +377,9 @@ All but first::
       "data/file1_copy"
     ]
 
-And w/o lists::
+And w/o lists:
+
+.. code-block:: shell
 
     $ findsame data | jq '.[]|.[]|.[1:]|.[]'
     "data/file1_copy"
@@ -351,7 +399,9 @@ And w/o lists::
     "data/dir1_copy"
 
 The last one can be used, for example, to delete all but the first in a group
-of equal files/dirs, e.g.::
+of equal files/dirs, e.g.:
+
+.. code-block:: shell
 
     $ findsame data | jq '.[]|.[]|.[1:]|.[]' | xargs cp -rvt duplicates/
 

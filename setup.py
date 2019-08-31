@@ -1,7 +1,8 @@
 # publish on pypi
 # ---------------
-#   $ python3 setup.py sdist
-#   $ twine upload dist/<this-package>-x.y.z.tar.gz
+#   $ python3 setup.py sdist bdist_wheel
+#   $ twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+#   $ twine upload dist/*
 
 import os
 from setuptools import setup, find_packages
@@ -15,14 +16,14 @@ with open(os.path.join(here, 'README.rst')) as fd:
 setup(
     name='findsame',
     version='0.0.0',
-    description='Find duplicate files and directories',
+    description='Find duplicate files and directories using hashes and a Merkle tree',
     long_description=long_description,
     url='https://github.com/elcorto/findsame',
     author='Steve Schmerler',
     author_email='git@elcorto.com',
     license='BSD 3-Clause',
-    keywords='same files directories merkle tree hash',
+    keywords='merkle-tree hash duplicates multithreading multiprocessing',
     packages=find_packages(),
-    install_requires=open('requirements.txt').read().splitlines(),
+##    install_requires=open('requirements.txt').read().splitlines(),
     scripts=[f'{bindir}/{script}' for script in os.listdir(bindir)]
 )
