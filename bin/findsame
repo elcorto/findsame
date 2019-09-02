@@ -40,8 +40,11 @@ if __name__ == '__main__':
                         default=cpu_count(), type=int,
                         help="threads per process [default: %(default)s]")
     parser.add_argument("-o", "--outmode",
-                        default=1, type=int,
-                        help="1: json, 2: json with hashes [default: %(default)s]")
+                        default=3, type=int,
+                        help="1: list of dicts (values of dict from mode 2), one "
+                             "dict per hash, 2: dict of dicts (full result), "
+                             "keys are hashes, 3: compact, sort by type "
+                             "(file, dir) [default: %(default)s]")
     parser.add_argument("-v", "--verbose",
                         default=False, action="store_true",
                         help="enable verbose/debugging output")

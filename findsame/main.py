@@ -1,4 +1,5 @@
 import functools
+from collections import defaultdict
 import os
 
 from findsame import common as co
@@ -34,12 +35,14 @@ def assemble_result(merkle_tree):
     #           typY: [path3]},
     #    fprB: {typX: [...]},
     #    ...}
-    result = dict()
+    if cfg.outmode == 3:
+        result = defaultdict(list)
+    else:
+        result = defaultdict(dict)
     empty = calc.hashsum('')
     for kind, inv_fprs in [('dir', merkle_tree.inverse_node_fprs()),
                            ('file', merkle_tree.inverse_leaf_fprs())]:
         for hsh, paths in inv_fprs.items():
-            hsh_dct = result.get(hsh, {})
             # exclude single items, only multiple fprs for now (hence the
             # name find*same* :)
             if len(paths) > 1:
@@ -62,12 +65,13 @@ def assemble_result(merkle_tree):
                     typ = f'{kind}:empty'
                 else:
                     typ = f'{kind}'
-                typ_paths = hsh_dct.get(typ, []) + paths
-                hsh_dct.update({typ: typ_paths})
-                result.update({hsh: hsh_dct})
+                if cfg.outmode == 3:
+                    result[typ].append(paths)
+                else:
+                    result[hsh][typ] = result[hsh].get(typ, []) + paths
     if cfg.outmode == 1:
-        return [dct for dct in result.values()]
-    elif cfg.outmode == 2:
+        return list(result.values())
+    elif cfg.outmode in [2,3]:
         return result
     else:
         raise Exception(f"illegal value for outmode: {cfg.outmode}")

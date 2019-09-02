@@ -94,32 +94,64 @@ def test_hash_file_limit():
                 calc.hash_file_limit(file_200_a_200_b, limit=limit, blocksize=bs) == \
                 hashlib.sha1(b'a'*limit).hexdigest()
 
+def _cmp_o3(val, ref):
+    if set(val.keys()) != set(ref.keys()):
+        print("dict keys not equal")
+        return False
+    # key = file, dir, file:empty, dir:empty
+    # val_lst = [[file1, file2, ...],
+    #            [...],
+    #            ...]
+    # The sub-lists in val_lst (and ref_lst=ref[key]) can be in random order,
+    # as is the order of the paths within each list. It is only important that
+    # all same-hash paths are present in their sub-list. Therefore we loop over
+    # lists, compare sets and count the number of matches.
+    for key,val_lst in val.items():
+        nsub = len(val_lst)
+        if len(ref[key]) != nsub:
+            print("not same number of sub-lists")
+            return False
+        cnt = 0
+        for val_sub_lst in val_lst:
+            for ref_sub_lst in ref[key]:
+                if set(ref_sub_lst) == set(val_sub_lst):
+                    cnt += 1
+        if cnt != nsub:
+            print(f"not exactly {cnt} equal sub-lists")
+            return False
+    return True
 
-def _preproc_json_with_hash(val, ref_fn):
+
+def _preproc_json_o2(val, ref_fn):
     val = json.loads(val)
     with open(ref_fn) as fd:
         ref = json.load(fd)
     return val, ref, lambda x,y: co.dict_equal(x, y)
 
 
-def _preproc_json(val, ref_fn):
+def _preproc_json_o1(val, ref_fn):
     val = json.loads(val)
     with open(ref_fn) as fd:
         ref = json.load(fd)
     return val, ref, lambda x,y: x == y
 
 
+def _preproc_json_o3(val, ref_fn):
+    val = json.loads(val)
+    with open(ref_fn) as fd:
+        ref = json.load(fd)
+    return val, ref, _cmp_o3
+
+
 def test_cli():
-    preproc_func = _preproc_json
-    cases = [('json_with_hash', '-o2', _preproc_json_with_hash, ''),
-             ('json', '-o1', _preproc_json, '| jq sort'),
-             ('json', '', _preproc_json, '| jq sort'),
+    cases = [('json_o2', '-o2', _preproc_json_o2, ''),
+             ('json_o1', '-o1', _preproc_json_o1, '| jq sort'),
+             ('json_o3', '-o3', _preproc_json_o3, ''),
              ]
     for name, outer_opts, preproc_func, post in cases:
         # Test all combos only once which are not related to output formatting.
-        # json_with_hash: the hashes are the ones of the while file, so all
-        # limit (-l) values must be bigger than the biggest file, which is the
-        # case here.
+        # json_o2: the hashes are the ones of the while file, so all limit (-l)
+        # values must be bigger than the biggest file.
         #
         # without hashes: We have test data file_200_a, file_200_a_200_b,
         # file_200_a_2000_b which are equal in the first 200 bytes, We test auto
@@ -128,7 +160,7 @@ def test_cli():
         # are different. A second iteration with doubled limit is performed and
         # if the number of same elements (now 0, before 2) doesn't change
         # (still 0), we are converged.
-        if name == 'json_with_hash':
+        if name == 'json_o2':
             opts_lst = ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K', '-l 128K',
                         '-b 99K -l 500K']
         else:
@@ -144,14 +176,14 @@ def test_cli():
                 print(out)
                 ref_fn = f'{here}/ref_output_{name}'
                 val, ref, comp = preproc_func(out, ref_fn)
-                assert comp(val, ref), "val:\n{}\nref:\n{}".format(val, ref)
+                assert comp(val, ref), f"{name}\nval:\n{val}\nref:\n{ref}"
 
 
 def test_auto_limit_cli():
     # This is already covered in test_cli() since the result is [] and
     # thus doesn't show up in canned reference results, but we test it
     # explicitely here anyway .. because we can!
-    for opts in ["-l auto -L 10"]:
+    for opts in ["-l auto -L 10 -o1"]:
         cmd = f'{here}/../../bin/findsame {opts} {here}/data/file_200_a*'
         out = subprocess.check_output(cmd, shell=True).decode().strip()
         assert out == '[]'

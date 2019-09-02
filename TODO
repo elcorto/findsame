@@ -13,17 +13,6 @@ in a string which we can hash, such as
 which should be fairly unique. At least that's one deterministic way to treat
 links.
 
-get rid of json output
-----------------------
-The json output is of the "here you go, deal with it" type. Postprocessing with
-jq is not really fun. Maybe we should step away from the "we only calculate
-hashes" mindset and add simple to use postprocessing for common tasks such as:
-only dirs, only files, only multiples, only uniques (the last one requires a
-change in main.py to output single-file hashes as well). Instead of puking out
-a json, we should store the results in pickled a dict or smth and add
-postprocessing sub-commands (similar to what we do in
-https://github.com/elcorto/unfish).)
-
 stdout/stderr
 -------------
 Use logging module.

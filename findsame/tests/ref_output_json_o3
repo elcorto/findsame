@@ -1,0 +1,43 @@
+{
+  "dir:empty": [
+    [
+      "data/dir2/empty_dir",
+      "data/dir2/empty_dir_copy",
+      "data/empty_dir",
+      "data/empty_dir_copy"
+    ]
+  ],
+  "dir": [
+    [
+      "data/dir1",
+      "data/dir1_copy"
+    ]
+  ],
+  "file:empty": [
+    [
+      "data/dir2/empty_dir/empty_file",
+      "data/dir2/empty_dir_copy/empty_file",
+      "data/empty_dir/empty_file",
+      "data/empty_dir_copy/empty_file",
+      "data/empty_file",
+      "data/empty_file_copy"
+    ]
+  ],
+  "file": [
+    [
+      "data/dir1/file2",
+      "data/dir1/file2_copy",
+      "data/dir1_copy/file2",
+      "data/dir1_copy/file2_copy",
+      "data/file2"
+    ],
+    [
+      "data/lena.png",
+      "data/lena_copy.png"
+    ],
+    [
+      "data/file1",
+      "data/file1_copy"
+    ]
+  ]
+}

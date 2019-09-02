@@ -4,3 +4,5 @@
 findsame/benchmark/files/
 findsame/benchmark/pics/
 findsame/benchmark/*.json*
+build/
+dist/
