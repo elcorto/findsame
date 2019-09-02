@@ -15,7 +15,7 @@ with open(os.path.join(here, 'README.rst')) as fd:
 
 setup(
     name='findsame',
-    version='0.1.0',
+    version='0.1.1',
     description='Find duplicate files and directories using hashes and a Merkle tree',
     long_description=long_description,
     url='https://github.com/elcorto/findsame',
