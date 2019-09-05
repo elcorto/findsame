@@ -1,4 +1,3 @@
-import sys
 import functools
 from collections import defaultdict
 
@@ -105,7 +104,7 @@ class lazyprop:
 
 def debug_msg(msg):
     if cfg.verbose:
-        sys.stderr.write("DBG: " + msg + "\n")
+        print("DBG: " + msg)
 
 
 def called(func):
