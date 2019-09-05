@@ -221,7 +221,7 @@ of benchmarks (runtime ~10 min for all benchmarks). Make sure to avoid doing
 any other extensive IO tasks while the benchmarks run, of course.
 
 **The default value of "maxsize" in benchmark.py (in the __main__ part) is only
-some MiB to allow qick testing. This needs to be changed to, say, 1 GiB in
+some MiB to allow quick testing. This needs to be changed to, say, 1 GiB in
 order to have meaningful benchmarks.**
 
 Bottom line:

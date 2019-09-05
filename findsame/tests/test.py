@@ -69,8 +69,8 @@ def test_adjust_blocksize():
 
 def test_hash_file_limit():
     bs = cfg.blocksize
-    file_200_a = pj(os.path.dirname(__file__), 'data/file_200_a')
-    file_200_a_200_b = pj(os.path.dirname(__file__), 'data/file_200_a_200_b')
+    file_200_a = pj(os.path.dirname(__file__), 'data/limit/deep/files/file_200_a')
+    file_200_a_200_b = pj(os.path.dirname(__file__), 'data/limit/deep/files/file_200_a_200_b')
     hashes = {file_200_a: 'e61cfffe0d9195a525fc6cf06ca2d77119c24a40',
               file_200_a_200_b: 'c29d2522ff37716a8aed11cec28555dd583d8497'}
     assert hashes[file_200_a] == calc.hash_file(file_200_a) == \
@@ -183,11 +183,20 @@ def test_auto_limit_cli():
     # This is already covered in test_cli() since the result is [] and
     # thus doesn't show up in canned reference results, but we test it
     # explicitely here anyway .. because we can!
-    for opts in ["-l auto -L 10 -o1"]:
-        cmd = f'{here}/../../bin/findsame {opts} {here}/data/file_200_a*'
-        out = subprocess.check_output(cmd, shell=True).decode().strip()
-        assert out == '[]'
+    opts = "-l auto -L 10 -o1"
+    cmd = f'{here}/../../bin/findsame {opts} {here}/data/limit/deep/files/file_200_a*'
+    out = subprocess.check_output(cmd, shell=True).decode().strip()
+    assert out == '[]'
 
+
+def test_auto_limit_cli_debug_iter():
+    opts = "-l auto -L 50 -v"
+    cmd = f"{here}/../../bin/findsame {opts} {here}/data | \
+             grep -E 'DBG.+auto_limit:.+(#same|limit=)'"
+    out = subprocess.check_output(cmd, shell=True).decode().strip()
+    with open(f"{here}/ref_output_debug_auto_limit") as fd:
+        ref = fd.read().strip()
+    assert out == ref
 
 def test_jq():
     jq_cmd_lst = ["jq '.[]|select(.dir)|.dir'",

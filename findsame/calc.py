@@ -314,7 +314,7 @@ class MerkleTree:
     def _worker(kv):
         return kv[0], kv[1].fpr
 
-    def _calc_fprs(self):
+    def _calc_leaf_fprs(self):
         """Trigger recursive fpr calculation."""
         useproc = False
         # leafs can be calculated in parallel since there are no dependencies
@@ -358,11 +358,16 @@ class MerkleTree:
             for leaf in self.tree.leafs.values():
                 leaf.fpr = self.leaf_fprs[leaf.path]
 
+    def _calc_node_fprs(self):
         # v.fpr attribute access triggers recursive fpr calculation in all
         # leafs and nodes connected to this one. Since we do not assume the
         # exietence of a single top node, we iterate thru all nodes
         # explicitely. lazyprop makes sure we don't do anything twice.
         self.node_fprs = dict((k,v.fpr) for k,v in self.tree.nodes.items())
+
+    def _calc_fprs(self):
+        self._calc_leaf_fprs()
+        self._calc_node_fprs()
 
     def set_leaf_fpr_func(self, limit):
         co.debug_msg(f"auto_limit: limit={co.size2str(limit)}")
@@ -400,26 +405,15 @@ class MerkleTree:
     def inverse_node_fprs(self):
         return co.invert_dict(self.node_fprs)
 
-    # XXX maybe set comparisons are costly, maybe just retun len(set(...)) even
-    # though there may be corner cases during iteration where len is the same
-    # but sets are different, e.g. when elements are swapped
-    def _same_paths_merged(self):
-        """Helper for auto limit iteration. We only need a measure of the total
-        number of same-fpr elements (leafs and nodes), since that must converge
-        when increasing limit. That is why we lump all of them together into a
-        single set.
-
-        Notes
-        -----
-        spm_*
+    def _same_leafs_merged(self):
+        """
+        Returns
+        -------
+        set
             {path1, path2, path5, path6, path7}
         """
-        merge = lambda inv_dct: set(itertools.chain(*(pp for pp in
-                                                      inv_dct.values() if len(pp)>1)))
-        spm_nodes = merge(self.inverse_node_fprs())
-        spm_leafs = merge(self.inverse_leaf_fprs())
-        spm = spm_nodes ^ spm_leafs
-        return spm_nodes, spm_leafs, spm
+        inv = self.inverse_leaf_fprs()
+        return set(itertools.chain(*(pp for pp in inv.values() if len(pp)>1)))
 
     def calc_fprs(self):
         max_limit = max(os.path.getsize(leaf.path) for leaf in
@@ -436,27 +430,25 @@ class MerkleTree:
                         break
             limit_itr = itr(cfg.auto_limit_min)
             self.set_leaf_fpr_func(next(limit_itr))
-            self._calc_fprs()
-            spm_nodes, spm_leafs, spm = self._same_paths_merged()
-            spm_old = spm
+            self._calc_leaf_fprs()
+            slm = self._same_leafs_merged()
+            slm_old = slm
             # prevent early convergence
-            spm_first = spm
-            co.debug_msg(f"auto_limit: #same items = {len(spm)}")
+            slm_first = slm
+            co.debug_msg(f"auto_limit: #same leafs = {len(slm)}")
             for limit in limit_itr:
-                for path in spm_nodes:
-                    del self.tree.nodes[path].fpr
-                    co.debug_msg(f"auto_limit: del fpr: {path}")
-                for path in spm_leafs:
+                for path in slm:
                     del self.tree.leafs[path].fpr
-                    co.debug_msg(f"auto_limit: del fpr: {path}")
+                    co.debug_msg(f"auto_limit: del leaf fpr: {path}")
                 self.set_leaf_fpr_func(limit)
-                self._calc_fprs()
-                spm_nodes, spm_leafs, spm = self._same_paths_merged()
-                co.debug_msg(f"auto_limit: #same items = {len(spm)}")
-                if spm_old == spm and spm != spm_first:
+                self._calc_leaf_fprs()
+                slm = self._same_leafs_merged()
+                co.debug_msg(f"auto_limit: #same leafs = {len(slm)}")
+                if slm_old == slm and slm != slm_first:
                     break
                 else:
-                    spm_old = spm
+                    slm_old = slm
+            self._calc_node_fprs()
         else:
             self.set_leaf_fpr_func(cfg.limit)
             self._calc_fprs()
