@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
-import argparse, json
+import argparse
+import json
 from multiprocessing import cpu_count
 
 from findsame import common as co
@@ -53,14 +54,9 @@ if __name__ == '__main__':
     cfg.nprocs = args.nprocs
     cfg.nthreads = args.nthreads
     cfg.blocksize = co.str2size(args.blocksize)
-    cfg.limit = co.str2size(args.limit) if args.limit != 'auto' else args.limit
+    cfg.limit = args.limit if args.limit == 'auto' else co.str2size(args.limit)
     cfg.auto_limit_min = co.str2size(args.auto_limit_min)
     cfg.verbose = args.verbose
     cfg.outmode = args.outmode
-
-    if cfg.limit != 'auto':
-        # modify here once since we use hash_file_limit_core w/o adjustment in inner
-        # loops b/c of speed
-        cfg.blocksize = calc.adjust_blocksize(cfg.blocksize, cfg.limit)
 
     print(json.dumps(main.main(files_dirs=args.files_dirs)))

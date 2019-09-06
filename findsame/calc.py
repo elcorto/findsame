@@ -77,8 +77,8 @@ def adjust_blocksize(blocksize, limit):
     bs : int
         new blocksize
 
-    Note
-    ----
+    Notes
+    -----
     This function is slow and shall not be used in inner loops. That's why we
     have :func:`hash_file_limit` for interactive use and
     :func:`hash_file_limit_core` for inner loops.
@@ -129,35 +129,6 @@ def split_path(path):
     """//foo/bar/baz -> ['foo', 'bar', 'baz']"""
     return [x for x in path.split('/') if x != '']
 
-
-# Merkle tree
-#
-# node = dir
-# leaf = file
-#
-# In [38]: !tree test
-# test                      # top node
-# └── a                     # node
-#     ├── b                 # node
-#     │   ├── c             # node
-#     │   │   └── file1     # leaf
-#     │   ├── file4         # leaf
-#     │   └── file5         # leaf
-#     ├── d                 # node
-#     │   └── e             # node
-#     │       └── file2     # leaf
-#     └── file3             # leaf
-#
-# 5 directories, 5 files
-#
-# In [39]: [(r,d,f) for r,d,f in os.walk('test/')]
-# Out[39]:
-# [('test/', ['a'], []),
-#  ('test/a', ['b', 'd'], ['file3']),
-#  ('test/a/b', ['c'], ['file5', 'file4']),
-#  ('test/a/b/c', [], ['file1']),
-#  ('test/a/d', ['e'], []),
-#  ('test/a/d/e', [], ['file2'])]
 
 class Element:
     def __init__(self, path=None):
@@ -215,17 +186,41 @@ class Leaf(Element):
         return self.fpr_func(self.path)
 
 
-# XXX check whether we can change leafs and nodes from dict to a list, I think
-# we never iterate over the dict and use the keys (which is path, also in each
-# Element again)
 class FileDirTree:
-    """File(leaf) + dir(node) part of a Merkle tree. No hashes. May consist of
-    multiple independent sub-graphs (e.g. if data is brought in by updata()),
-    thus there is no single "top" element which could be used for recursive
-    hash calculation. But we do explicit leaf hash calculation in parallel
-    anyway in MerkleTree, so no need for recursive magic.
-    """
+    """File (leaf) + dir (node) part of a Merkle tree. No hash calculation
+    here.
 
+    May consist of multiple independent sub-graphs (e.g. if data is brought in
+    by update()), thus there is no single "top" element which could be used for
+    recursive hash calculation (more details in MerkleTree).
+
+    Notes
+    -----
+    Merkle tree (single graph) with one top node:
+
+    ::
+
+        $ tree test
+        test                      # top node
+        └── a                     # node
+            ├── b                 # node
+            │   ├── c             # node
+            │   │   └── file1     # leaf
+            │   ├── file4         # leaf
+            │   └── file5         # leaf
+            ├── d                 # node
+            │   └── e             # node
+            │       └── file2     # leaf
+            └── file3             # leaf
+
+        >>> [(r,d,f) for r,d,f in os.walk('test/')]
+        [('test/', ['a'], []),
+         ('test/a', ['b', 'd'], ['file3']),
+         ('test/a/b', ['c'], ['file5', 'file4']),
+         ('test/a/b/c', [], ['file1']),
+         ('test/a/d', ['e'], []),
+         ('test/a/d/e', [], ['file2'])]
+    """
     def __init__(self, dr=None, files=None):
         self.dr = dr
         self.files = files
@@ -296,14 +291,86 @@ class FileDirTree:
 
 
 class MerkleTree:
+    """
+    In the simplest setting, the tree is a single graph with a top node. In
+    that case, a naive serial calculation would just call top.fpr, which would
+    trigger recursive hash (fpr) calculations for all nodes and their connected
+    leafs, thus populating each tree element (leaf, node) with a fpr value.
+
+    Here, we have two differences.
+
+    (1) We deal with possibly multiple distinct sub-graphs, thus there is no
+    single top element. It was a design decision to NOT model this using
+    multiple MerkleTree instances (sub-graphs) with a top node each, for
+    reasons which will become clear below. For one, we don't need to perform
+    complicated graph calculations to separate nodes and leafs into separate
+    graphs.
+
+    (2) We calculate leaf fprs in parallel explicitly before node fprs, thus
+    leaf fprs are never calculated by recursive node fprs. Therefore, we do not
+    need a top node. Calculating leafs in parallel is easy since they are
+    independent from one another.
+
+    These two points imply to issues, which are however easily solved:
+
+    _calc_node_fprs(): self.node_fprs
+    ---------------------------------
+    node.fpr attribute access triggers recursive fpr calculation in all leafs
+    and nodes connected to this node. But since we do not assume the existence
+    of a single top node, we need to iterate thru all nodes explicitly. The
+    @lazyprop decorator of the fpr attribute (see class Element) makes sure we
+    don't calculate anything more than once. Profiling shows that the decorator
+    doesn't consume much resources, compared to hash calculation itself.
+
+    _calc_leaf_fprs(): share_leafs
+    ------------------------------
+    The calculation of self.node_fprs in _calc_node_fprs() causes a slowdown
+    with ProcessPoolExecutor if we do not assign calculated leaf fprs
+    beforehand. This is b/c when calculating node_fprs, we do not operate on
+    self.leaf_fprs, which WAS calculated fast in parallel, but on self.tree (a
+    MerkleTree instance). This is NOT shared between processes. multiprocessing
+    spawns N new processes, each with its own MerkleTree object, and each will
+    calculate approximately len(leafs)/N fprs, which are then collected in
+    leaf_fprs. Therefore, when we leave the pool context, the MerkleTree
+    objects of each sub-process are deleted, while the main process' MerkleTree
+    object is still empty (no element has an fpr attribute value)! Then, the
+    node_fprs calculation in _calc_node_fprs() triggers a new fpr calculation
+    for the entire tree of the main process all over again. We work around that
+    by setting leaf.fpr by hand. Since the main process' MerkleTree is empty,
+    we don't need to test if leaf.fpr is already populated (for that, we'd need
+    to extend the @lazyprop decorator anyway).
+
+    some attributes
+    ---------------
+    leaf_fprs, node_fprs:
+      {path1: fprA,
+       path2: fprA,
+       path3: fprB,
+       path4: fprC,
+       path5: fprD,
+       path6: fprD,
+       path7: fprD,
+       ...}
+
+    inverse_*_fprs:
+       fprA: [path1, path2],
+       fprB: [path3],
+       fprC: [path4],
+       fprD: [path5, path6, path7],
+       ...}
+    """
     def __init__(self, tree, calc=True):
+        """
+        Parameters
+        ----------
+        tree : FileDirTree instance
+        """
         self.nprocs = cfg.nprocs
         self.nthreads = cfg.nthreads
         self.tree = tree
         # Change only for benchmarks and debugging, should always be True in
         # production
         self.share_leafs = cfg.share_leafs
-
         if calc:
             self.calc_fprs()
 
@@ -315,12 +382,12 @@ class MerkleTree:
         return kv[0], kv[1].fpr
 
     def _calc_leaf_fprs(self):
-        """Trigger recursive fpr calculation."""
+        # whether we use multiprocessing
         useproc = False
-        # leafs can be calculated in parallel since there are no dependencies
+
         if self.nthreads == 1 and self.nprocs == 1:
             # same as
-            #   self.leaf_fprs = dict((k,v.fpr) for k,v in self.leafs.items())
+            #   self.leaf_fprs = dict((k,v.fpr) for k,v in self.tree.leafs.items())
             # just looks nicer :)
             getpool = SequentialPoolExecutor
         elif self.nthreads == 1:
@@ -334,35 +401,17 @@ class MerkleTree:
             getpool = lambda: ProcessAndThreadPoolExecutor(nprocs=self.nprocs,
                                                            nthreads=self.nthreads)
             useproc = True
+
         with getpool() as pool:
             self.leaf_fprs = dict(pool.map(self._worker,
                                            self.tree.leafs.items(),
                                            chunksize=1))
 
-        # The node_fprs calculation below causes a slowdown with
-        # ProcessPoolExecutor if we do not assign calculated leaf fprs
-        # beforehand. This is b/c we do not operate on self.leaf_fprs, which
-        # WAS calculated fast in parallel, but on MerkleTree. MerkleTree is NOT
-        # shared between processes. multiprocessing spawns N new processes, ech
-        # with it's own MerkleTree object, and each will calculate
-        # approximately len(leafs)/N fprs, which are then collected in
-        # leaf_fprs. Therefore, when we leave the pool context, the
-        # MerkleTree objects of each sub-process are deleted, while the main
-        # process MerkleTree object is still empty! Then, the node_fprs
-        # calculation below triggers a new fpr calculation for the entire tree
-        # of the main process all over again. We work around that by setting
-        # leaf.fpr by hand. Since the main process' MerkleTree is empty, we
-        # don't need to test if leaf.fpr is already populated (for that, we'd
-        # need to extend the lazyprop decorator anyway).
         if useproc and self.share_leafs:
             for leaf in self.tree.leafs.values():
                 leaf.fpr = self.leaf_fprs[leaf.path]
 
     def _calc_node_fprs(self):
-        # v.fpr attribute access triggers recursive fpr calculation in all
-        # leafs and nodes connected to this one. Since we do not assume the
-        # exietence of a single top node, we iterate thru all nodes
-        # explicitely. lazyprop makes sure we don't do anything twice.
         self.node_fprs = dict((k,v.fpr) for k,v in self.tree.nodes.items())
 
     def _calc_fprs(self):
@@ -383,22 +432,6 @@ class MerkleTree:
         for leaf in self.tree.leafs.values():
             leaf.fpr_func = leaf_fpr_func
 
-    # leaf_fprs, node_fprs:
-    #   {path1: fprA,
-    #    path2: fprA,
-    #    path3: fprB,
-    #    path4: fprC,
-    #    path5: fprD,
-    #    path6: fprD,
-    #    path7: fprD,
-    #    ...}
-    #
-    # inverse_*_fprs:
-    #    fprA: [path1, path2],
-    #    fprB: [path3],
-    #    fprC: [path4],
-    #    fprD: [path5, path6, path7],
-    #    ...}
     def inverse_leaf_fprs(self):
         return co.invert_dict(self.leaf_fprs)
 
