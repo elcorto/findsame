@@ -359,7 +359,7 @@ class MerkleTree:
        fprD: [path5, path6, path7],
        ...}
     """
-    def __init__(self, tree, calc=True):
+    def __init__(self, tree):
         """
         Parameters
         ----------
@@ -371,8 +371,7 @@ class MerkleTree:
         # Change only for benchmarks and debugging, should always be True in
         # production
         self.share_leafs = cfg.share_leafs
-        if calc:
-            self.calc_fprs()
+        self.calc_fprs()
 
     # pool.map(lambda kv: (k, v.fpr), ...) in calc_fprs() doesn't work,
     # error is "Can't pickle ... lambda ...", same with defining _worker()

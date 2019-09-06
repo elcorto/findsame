@@ -26,7 +26,7 @@ def get_merkle_tree(files_dirs):
     for dr in dirs:
         dt = calc.FileDirTree(dr=dr)
         tree.update(dt)
-    return calc.MerkleTree(tree, calc=True)
+    return calc.MerkleTree(tree)
 
 
 def assemble_result(merkle_tree):
