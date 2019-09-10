@@ -328,17 +328,17 @@ class MerkleTree:
     with ProcessPoolExecutor if we do not assign calculated leaf fprs
     beforehand. This is b/c when calculating node_fprs, we do not operate on
     self.leaf_fprs, which WAS calculated fast in parallel, but on self.tree (a
-    MerkleTree instance). This is NOT shared between processes. multiprocessing
-    spawns N new processes, each with its own MerkleTree object, and each will
-    calculate approximately len(leafs)/N fprs, which are then collected in
-    leaf_fprs. Therefore, when we leave the pool context, the MerkleTree
-    objects of each sub-process are deleted, while the main process' MerkleTree
-    object is still empty (no element has an fpr attribute value)! Then, the
-    node_fprs calculation in _calc_node_fprs() triggers a new fpr calculation
-    for the entire tree of the main process all over again. We work around that
-    by setting leaf.fpr by hand. Since the main process' MerkleTree is empty,
-    we don't need to test if leaf.fpr is already populated (for that, we'd need
-    to extend the @lazyprop decorator anyway).
+    FileDirTree instance). This is NOT shared between processes.
+    multiprocessing spawns N new processes, each with its own MerkleTree
+    object, and each will calculate approximately len(leafs)/N fprs, which are
+    then collected in leaf_fprs. Therefore, when we leave the pool context, the
+    MerkleTree objects (i.e. self) of each sub-process are deleted, while the
+    main process' self.tree object is still empty (no element has an fpr
+    attribute value)! Then, the node_fprs calculation in _calc_node_fprs()
+    triggers a new fpr calculation for the entire tree of the main process all
+    over again. We work around that by setting leaf.fpr by hand. Since the main
+    process' self.tree is empty, we don't need to test if leaf.fpr is already
+    populated (for that, we'd need to extend the @lazyprop decorator anyway).
 
     some attributes
     ---------------
