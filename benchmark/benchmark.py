@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 
-import timeit, os, sys, shutil, textwrap
+import os
+import shutil
+import sys
+import textwrap
+import timeit
 from tempfile import mkdtemp
+from itertools import product
 
 import pandas as pd
 import numpy as np
 
-from findsame import parallel as pl
 from psweep import psweep as ps
-from itertools import product
+
+from findsame import parallel as pl
 from findsame.common import KiB, MiB, GiB, size2str
 from findsame import calc
 pj = os.path.join
