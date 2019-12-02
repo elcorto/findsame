@@ -43,9 +43,8 @@ def bytes_linspace(start, stop, num):
 
 def write(fn, size):
     """Write a single file of `size` in bytes to path `fn`."""
-    data = b'x'*int(size)
     with open(fn, 'wb') as fd:
-        fd.write(data)
+        fd.write(os.urandom(size))
 
 
 def write_single_files(testdir, sizes):
