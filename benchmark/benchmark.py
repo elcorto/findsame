@@ -344,7 +344,7 @@ if __name__ == '__main__':
         bench_main_parallel_2d,
         ]
     if len(sys.argv) == 2:
-        df = ps.df_json_read(sys.argv[1])
+        df = ps.df_read(sys.argv[1], fmt='json')
     else:
         df = pd.DataFrame()
     # hack for strange FreeBSD 10.3 (FreeNAS) 2 GB file size limit issue
