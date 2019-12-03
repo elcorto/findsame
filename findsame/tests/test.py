@@ -228,6 +228,8 @@ def test_size_str():
     sizes = [1023, random.randint(1000, 300000000000)]
     for size in sizes:
         assert co.str2size(co.size2str(size, prec=30)) == size
+    assert co.size2str(co.str2size('None')) == 'None'
+    assert co.str2size(co.size2str(None)) is None
 
 
 def test_lazy():
