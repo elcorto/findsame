@@ -117,25 +117,27 @@ if __name__ == '__main__':
             ymin = Y[min_idx]
             zmin = Z[min_idx]
             xmin_proc = x[min_idx_proc]
-            ymin_proc = 1
+            ymin_proc = 1.0
             zmin_proc = Z[min_idx_proc,0]
-            xmin_thread = 1
+            xmin_thread = 1.0
             ymin_thread = y[min_idx_thread]
             zmin_thread = Z[0,min_idx_thread]
+            zmax = Z.max()
+            zmax_proc = Z[:,0].max()
+            zmax_thread = Z[0,:].max()
             print(title)
-            print("global min: nproc={:.0f} nthread={:.0f}, speedup (max/min): {:.1f}".format(x[min_idx[0]], y[min_idx[1]], Z.max()/zmin))
-            print("proc   min: {:.0f},                 speedup (max/min): {:.1f}".format(x[min_idx_proc], Z.max()/zmin_proc))
-            print("thread min: {:.0f},                 speedup (max/min): {:.1f}".format(y[min_idx_thread], Z.max()/zmin_thread))
-            ax.plot([xmin], [ymin], [zmin], 'go', ms=5)
-            ax.plot([xmin_proc], [ymin_proc], [zmin_proc], 'ro', ms=5)
-            ax.plot([xmin_thread], [ymin_thread], [zmin_thread], 'ro', ms=5)
+            print("global min: nproc={:.0f} nthread={:.0f}, speedup (max/min): {:.1f}".format(x[min_idx[0]], y[min_idx[1]], zmax/zmin))
+            print("proc   min: {:.0f},                 speedup (max/min): {:.1f}".format(x[min_idx_proc], zmax_proc/zmin_proc))
+            print("thread min: {:.0f},                 speedup (max/min): {:.1f}".format(y[min_idx_thread], zmax_thread/zmin_thread))
+            ax.view_init(20,130)
+            ax.plot_wireframe(X,Y,Z)
+            ax.scatter(xx, yy, zz)
+            ax.plot([xmin], [ymin], [zmin], 'go', ms=10)
+            ax.plot([xmin_proc], [ymin_proc], [zmin_proc], 'ro', ms=10)
+            ax.plot([xmin_thread], [ymin_thread], [zmin_thread], 'bo', ms=10)
             ax.set_xlabel('procs')
             ax.set_ylabel('threads')
             ax.set_zlabel('timing (s)')
-            ax.view_init(20,60)
-            ax.plot_wireframe(X,Y,Z)
-            ax.scatter(xx, yy, zz)
             ax.set_title(title)
             savefig(fig, '{}_{}'.format(study, maxsize_str))
-
     plt.show()
