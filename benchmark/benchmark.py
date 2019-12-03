@@ -135,7 +135,7 @@ def psweep_callback(dct, stmt=None, setup=None):
 
 def bench_main_blocksize_filesize(tmpdir, maxsize):
     stmt = textwrap.dedent("""
-        cfg.update(dict(blocksize={blocksize}))
+        cfg.update(blocksize={blocksize})
         main.main({files_dirs})
         """)
     params = []
@@ -181,10 +181,10 @@ def bench_main_blocksize_filesize(tmpdir, maxsize):
 
 def bench_main_parallel(tmpdir, maxsize):
     stmt = textwrap.dedent("""
-        cfg.update(dict(blocksize={blocksize},
-                        nthreads={nthreads},
-                        nprocs={nprocs},
-                        share_leafs={share_leafs}))
+        cfg.update(blocksize={blocksize},
+                   nthreads={nthreads},
+                   nprocs={nprocs},
+                   share_leafs={share_leafs})
         main.main({files_dirs})
         """)
     params = []
@@ -225,9 +225,9 @@ def bench_main_parallel(tmpdir, maxsize):
 
 def bench_main_parallel_2d(tmpdir, maxsize):
     stmt = textwrap.dedent("""
-        cfg.update(dict(blocksize={blocksize},
-                        nthreads={nthreads},
-                        nprocs={nprocs}))
+        cfg.update(blocksize={blocksize},
+                   nthreads={nthreads},
+                   nprocs={nprocs})
         main.main({files_dirs})
         """)
     params = []
@@ -363,7 +363,6 @@ if __name__ == '__main__':
         twoGB = 2*GiB
     # for quick testing of this script
     for maxsize in [20*MiB]:
-##    for maxsize in [200*MiB]:
 ##    # production setting
 ##    for maxsize in [GiB]:
 ##    for maxsize in [GiB, twoGB]:
