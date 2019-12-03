@@ -73,7 +73,7 @@ def write_file_groups(testdir, sizes, group_size=None):
     """For each file size (bytes) in `sizes`, write a group of ``nfiles`` files
     ``{testdir}/filesize_{size}/file_{idx}; idx=0...nfiles-1``, such that each
     dir ``filesize_{size}`` has approximately ``group_size``. If `group_size`
-    is omitted, then use ``group_size=max(sizes)`` such that the the group with
+    is omitted, then use ``group_size=max(sizes)`` such that the group with
     the largest file size has only one file. Returns lists of group dirs
     and file names."""
     if group_size is None:
@@ -123,13 +123,13 @@ def write_collection(collection_size=GiB, min_size=128*KiB, tmpdir=None,
     return testdir, group_dirs, files
 
 
-def psweep_callback(dct, stmt=None, setup=None, ctx=None):
+def psweep_callback(dct, stmt=None, setup=None):
     """Default callback func for psweep.run()."""
     timing = timeit.repeat(stmt.format(**dct),
                            setup,
                            repeat=3,
                            number=1,
-                           globals=ctx)
+                           globals=None)
     return {'timing': min(timing)}
 
 
@@ -266,7 +266,7 @@ def bench_hash_file_parallel(tmpdir, maxsize):
                 'thread,proc=1': lambda nw: pl.ProcessAndThreadPoolExecutor(1, nw),
                 }
 
-    def callback(dct, stmt=None, setup='pass', ctx=None):
+    def callback(dct, stmt=None, setup='pass'):
         ctx = dict(pool_map=pool_map,
                    pl=pl,
                    files=files,
@@ -363,6 +363,7 @@ if __name__ == '__main__':
         twoGB = 2*GiB
     # for quick testing of this script
     for maxsize in [20*MiB]:
+##    for maxsize in [200*MiB]:
 ##    # production setting
 ##    for maxsize in [GiB]:
 ##    for maxsize in [GiB, twoGB]:
