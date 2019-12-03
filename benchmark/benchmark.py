@@ -19,9 +19,18 @@ from findsame import calc
 pj = os.path.join
 
 
+# This code is executed by timeit in callback() before each benchmark run. Each
+# run (bench_func) may modify cfg -- the package-wide configuration dict
+# findsame.config.cfg -- before calling the package's main.main() or other
+# functions. Since this script here is run by a single Python interpreter,
+# changes to cfg are persistent from one bench_func to another. This is by
+# design, but in this context here a subtle gotcha. Therefore, we need to reset
+# cfg to default_cfg before doing anything else in each run.
 default_setup = textwrap.dedent("""
     from findsame import main
-    from findsame.config import cfg
+    from findsame.config import cfg, default_cfg
+
+    cfg.update(default_cfg)
     """)
 
 
