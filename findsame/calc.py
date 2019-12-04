@@ -1,18 +1,3 @@
-"""
-python < v3.6
--------------
-
-In order to guarantee consistent output between two runs on the same data, we
-use OrderedDict. As of Python 3.7, builtin dicts are ordered again. Already in
-3.6, this was an implementation detail of CPython. Before, some Python versions
-had random order dicts, some did not, but it was never in the spec. Still, we
-use OrderedDict to support older Pythons.
-
-Even with OrderedDict(), the output order is different from the
-python2-generated ordered ref_output in test/. To make tests pass, we need to
-sort the output, as well as the ref_output generated with python2.
-"""
-
 import os
 import hashlib
 import functools
