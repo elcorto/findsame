@@ -272,7 +272,7 @@ class FileDirTree:
                 if os.path.islink(fn):
                     co.debug_msg(f"skip link: {fn}")
                     continue
-                assert os.path.isfile(fn)
+                assert os.path.isfile(fn), fn
                 leaf = Leaf(path=fn)
                 node.add_child(leaf)
                 self.leafs[fn] = leaf
@@ -445,6 +445,8 @@ class MerkleTree:
         max_limit = max(os.path.getsize(leaf.path) for leaf in
                         self.tree.leafs.values())
         if cfg.limit == 'auto':
+            assert cfg.auto_limit_converged > 1, ("auto_limit_converged must "
+                                                  "be > 1")
             def itr(limit):
                 yield limit
                 while True:
@@ -456,26 +458,30 @@ class MerkleTree:
                         break
             limit_itr = itr(cfg.auto_limit_min)
             limit = next(limit_itr)
-            co.debug_msg(f"auto_limit: limit={co.size2str(limit)}")
             self.set_leaf_fpr_func(limit)
             self._calc_leaf_fprs()
             slm = self._same_leafs_merged()
-            co.debug_msg(f"auto_limit: # same leafs = {len(slm)}")
+            co.debug_msg(f"auto_limit: limit={co.size2str(limit):10} "
+                         f"# same leafs = {len(slm)}")
             slm_old = slm
+            same_cnt = 1
             for limit in limit_itr:
                 for path in slm:
                     del self.tree.leafs[path].fpr
                     co.debug_msg(f"auto_limit: del leaf fpr: {path}")
-                co.debug_msg(f"auto_limit: limit={co.size2str(limit)}")
                 self.set_leaf_fpr_func(limit)
                 self._calc_leaf_fprs()
                 slm = self._same_leafs_merged()
-                co.debug_msg(f"auto_limit: # same leafs = {len(slm)}")
+                co.debug_msg(f"auto_limit: limit={co.size2str(limit):10} "
+                             f"# same leafs = {len(slm)}")
                 if slm_old == slm:
-                    co.debug_msg("auto_limit: converged")
-                    break
+                    same_cnt += 1
+                    if same_cnt == cfg.auto_limit_converged:
+                        co.debug_msg(f"auto_limit: converged")
+                        break
                 else:
                     slm_old = slm
+                    same_cnt = 1
             self._calc_node_fprs()
         else:
             self.set_leaf_fpr_func(cfg.limit)

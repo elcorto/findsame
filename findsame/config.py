@@ -20,7 +20,8 @@ cfg = Config(nprocs=1,
              limit=None,
              auto_limit_min=8*1024,
              auto_limit_increase_fac=2,
-             outmode=1,
+             auto_limit_converged=3,
+             outmode=3,
              verbose=False,
              )
 

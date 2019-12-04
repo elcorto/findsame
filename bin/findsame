@@ -32,22 +32,27 @@ if __name__ == '__main__':
                              "necessary automatically")
     parser.add_argument("-L", "--auto-limit-min",
                         default=co.size2str(cfg.auto_limit_min),
-                        help="start value for auto LIMIT calculation when "
+                        help="start value for auto LIMIT optimization when "
                              "--limit auto is used [default: %(default)s]")
+    parser.add_argument("-c", "--auto-limit-converged",
+                        default=cfg.auto_limit_converged, type=int,
+                        help="how many times we find the same number of equal "
+                             "files in a row to consider auto limit converged "
+                             "[default: %(default)s]")
     parser.add_argument("-p", "--nprocs",
-                        default=1, type=int,
+                        default=cfg.nprocs, type=int,
                         help="number of parallel processes [default: %(default)s]")
     parser.add_argument("-t", "--nthreads",
                         default=cpu_count(), type=int,
                         help="threads per process [default: %(default)s]")
     parser.add_argument("-o", "--outmode",
-                        default=3, type=int,
+                        default=cfg.outmode, type=int,
                         help="1: list of dicts (values of dict from mode 2), one "
                              "dict per hash, 2: dict of dicts (full result), "
                              "keys are hashes, 3: compact, sort by type "
                              "(file, dir) [default: %(default)s]")
     parser.add_argument("-v", "--verbose",
-                        default=False, action="store_true",
+                        default=cfg.verbose, action="store_true",
                         help="enable verbose/debugging output")
     args = parser.parse_args()
 
@@ -56,6 +61,7 @@ if __name__ == '__main__':
     cfg.blocksize = co.str2size(args.blocksize)
     cfg.limit = args.limit if args.limit == 'auto' else co.str2size(args.limit)
     cfg.auto_limit_min = co.str2size(args.auto_limit_min)
+    cfg.auto_limit_converged = args.auto_limit_converged
     cfg.verbose = args.verbose
     cfg.outmode = args.outmode
 
