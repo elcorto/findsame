@@ -474,7 +474,7 @@ class MerkleTree:
                 slm = self._same_leafs_merged()
                 co.debug_msg(f"auto_limit: limit={co.size2str(limit):10} "
                              f"# same leafs = {len(slm)}")
-                if slm_old == slm:
+                if len(slm_old) == len(slm):
                     same_cnt += 1
                     if same_cnt == cfg.auto_limit_converged:
                         co.debug_msg(f"auto_limit: converged")
