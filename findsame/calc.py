@@ -418,7 +418,6 @@ class MerkleTree:
         self._calc_node_fprs()
 
     def set_leaf_fpr_func(self, limit):
-        co.debug_msg(f"auto_limit: limit={co.size2str(limit)}")
         bs = adjust_blocksize(cfg.blocksize, limit)
         if limit is None:
             leaf_fpr_func = functools.partial(hash_file,
@@ -461,22 +460,24 @@ class MerkleTree:
                         co.debug_msg("auto_limit: limit > max file size, stop")
                         break
             limit_itr = itr(cfg.auto_limit_min)
-            self.set_leaf_fpr_func(next(limit_itr))
+            limit = next(limit_itr)
+            co.debug_msg(f"auto_limit: limit={co.size2str(limit)}")
+            self.set_leaf_fpr_func(limit)
             self._calc_leaf_fprs()
             slm = self._same_leafs_merged()
+            co.debug_msg(f"auto_limit: # same leafs = {len(slm)}")
             slm_old = slm
-            # prevent early convergence
-            slm_first = slm
-            co.debug_msg(f"auto_limit: #same leafs = {len(slm)}")
             for limit in limit_itr:
                 for path in slm:
                     del self.tree.leafs[path].fpr
                     co.debug_msg(f"auto_limit: del leaf fpr: {path}")
+                co.debug_msg(f"auto_limit: limit={co.size2str(limit)}")
                 self.set_leaf_fpr_func(limit)
                 self._calc_leaf_fprs()
                 slm = self._same_leafs_merged()
-                co.debug_msg(f"auto_limit: #same leafs = {len(slm)}")
-                if slm_old == slm and slm != slm_first:
+                co.debug_msg(f"auto_limit: # same leafs = {len(slm)}")
+                if slm_old == slm:
+                    co.debug_msg("auto_limit: converged")
                     break
                 else:
                     slm_old = slm

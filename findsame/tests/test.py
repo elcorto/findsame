@@ -164,7 +164,7 @@ def test_cli():
             opts_lst = ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K', '-l 128K',
                         '-b 99K -l 500K']
         else:
-            opts_lst = ['-l auto', '-l auto -L 8K', '-l auto -L 10']
+            opts_lst = ['-l auto', '-l auto -L 8K', '-l auto -L 150']
         for opts in opts_lst:
             exe = f'{here}/../../bin/findsame {outer_opts} {opts}'
             for args in ['data', 'data/*']:
@@ -179,24 +179,29 @@ def test_cli():
                 assert comp(val, ref), f"{name}\nval:\n{val}\nref:\n{ref}"
 
 
-def test_auto_limit_cli():
-    # This is already covered in test_cli() since the result is [] and
-    # thus doesn't show up in canned reference results, but we test it
-    # explicitely here anyway .. because we can!
-    opts = "-l auto -L 10 -o1"
-    cmd = f'{here}/../../bin/findsame {opts} {here}/data/limit/deep/files/file_200_a*'
-    out = subprocess.check_output(cmd, shell=True).decode().strip()
-    assert out == '[]'
+def test_auto_limit():
+    # The case -L 150 is already covered in test_cli() since the result is {}
+    # and thus doesn't show up in canned reference results. Here we test it
+    # explicitely and with another limit -L 30 were files are classified as
+    # equal, i.e. auto_limit_min is too small.
+    for L in [30, 150]:
+        opts = f"-l auto -L {L} -o3"
+        cmd = f'{here}/../../bin/findsame {opts} {here}/data/limit/deep/files'
+        out = subprocess.check_output(cmd, shell=True).decode().strip().replace(here + '/','')
+        ref_fn = f'{here}/ref_output_test_auto_limit_L_{L}'
+        val, ref, comp = _preproc_json_o3(out, ref_fn)
+        assert comp(val, ref), f"{ref_fn}\nval:\n{val}\nref:\n{ref}"
 
 
-def test_auto_limit_cli_debug_iter():
-    opts = "-l auto -L 50 -v"
-    cmd = f"{here}/../../bin/findsame {opts} {here}/data | \
-             grep -E 'DBG.+auto_limit:.+(#same|limit=)'"
-    out = subprocess.check_output(cmd, shell=True).decode().strip()
-    with open(f"{here}/ref_output_debug_auto_limit") as fd:
+def test_auto_limit_debug():
+    opts = "-l auto -L 150 -v"
+    cmd = f"{here}/../../bin/findsame {opts} {here}/data/limit/deep/files | \
+             grep auto_limit | grep -v 'del leaf fpr'"
+    out = subprocess.check_output(cmd, shell=True).decode().strip().replace(here + '/','')
+    with open(f"{here}/ref_output_test_auto_limit_debug") as fd:
         ref = fd.read().strip()
     assert out == ref
+
 
 def test_jq():
     jq_cmd_lst = ["jq '.[]|select(.dir)|.dir'",

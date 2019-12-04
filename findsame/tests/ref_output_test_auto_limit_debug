@@ -1,0 +1,9 @@
+DBG: auto_limit: limit=150.0
+DBG: auto_limit: # same leafs = 3
+DBG: auto_limit: limit=300.0
+DBG: auto_limit: # same leafs = 2
+DBG: auto_limit: limit=600.0
+DBG: auto_limit: # same leafs = 0
+DBG: auto_limit: limit=1.2K
+DBG: auto_limit: # same leafs = 0
+DBG: auto_limit: converged
