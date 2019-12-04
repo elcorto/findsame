@@ -23,7 +23,7 @@ setup(
     author_email='git@elcorto.com',
     license='BSD 3-Clause',
     keywords='merkle-tree hash duplicates multithreading multiprocessing',
-    packages=find_packages(),
-##    install_requires=open('requirements.txt').read().splitlines(),
+    packages=find_packages(include=('findsame',),
+                           exclude=('findsame/test', 'benchmark')),
     scripts=[f'{bindir}/{script}' for script in os.listdir(bindir)]
 )
