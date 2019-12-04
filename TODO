@@ -20,19 +20,10 @@ imports
 -------
 Use package-local relative imports
 
-leaf fingerprints (fpr)
------------------------
+leaf fingerprints (fpr): use file size as well
+----------------------------------------------
 Use file size as well as content hash. Or do it iteratively (like some other
 tools):
 1) fpr = hash(file size)
 2) for remaining equals: fpr = hash(file or part of file, depening on --limit)
 3) Maybe only useful to incorporate into auto-limit iteration?
-
-auto limit
-----------
-Change convergence behavior: when #same leafs is equal 2 times -> stop. Either
-auto_limit_min was too small and we are in a local opt .. so be it. Use better
-auto_limit_min like 500K. From many tests: 500K is mostly converged already and
-fast. Small auto_limit_min like 8K often converge too early. So make 500K the
-default auto_limit_min and avoid running until we reace limit > file size. Not
-useful.
