@@ -365,48 +365,43 @@ class MerkleTree:
         ----------
         tree : FileDirTree instance
         """
-        self.nprocs = cfg.nprocs
-        self.nthreads = cfg.nthreads
         self.tree = tree
-        # Change only for benchmarks and debugging, should always be True in
-        # production
-        self.share_leafs = cfg.share_leafs
         self.calc_fprs()
 
-    # pool.map(lambda kv: (k, v.fpr), ...) in calc_fprs() doesn't work,
-    # error is "Can't pickle ... lambda ...", same with defining _worker()
-    # inside calc_fprs(), need to def it in outer scope
+    # pool.map(lambda kv: (k, v.fpr), ...) in _calc_leaf_fprs() doesn't work,
+    # error is "Can't pickle ... lambda ...", same with defining _fpr_worker()
+    # inside _calc_leaf_fprs(), need to def it in outer scope
     @staticmethod
-    def _worker(kv):
+    def _fpr_worker(kv):
         return kv[0], kv[1].fpr
 
     def _calc_leaf_fprs(self):
         # whether we use multiprocessing
         useproc = False
 
-        if self.nthreads == 1 and self.nprocs == 1:
+        if cfg.nthreads == 1 and cfg.nprocs == 1:
             # same as
             #   self.leaf_fprs = dict((k,v.fpr) for k,v in self.tree.leafs.items())
             # just looks nicer :)
             getpool = SequentialPoolExecutor
-        elif self.nthreads == 1:
-            assert self.nprocs > 1
-            getpool = lambda: ProcessPoolExecutor(self.nprocs)
+        elif cfg.nthreads == 1:
+            assert cfg.nprocs > 1
+            getpool = lambda: ProcessPoolExecutor(cfg.nprocs)
             useproc = True
-        elif self.nprocs == 1:
-            assert self.nthreads > 1
-            getpool = lambda: ThreadPoolExecutor(self.nthreads)
+        elif cfg.nprocs == 1:
+            assert cfg.nthreads > 1
+            getpool = lambda: ThreadPoolExecutor(cfg.nthreads)
         else:
-            getpool = lambda: ProcessAndThreadPoolExecutor(nprocs=self.nprocs,
-                                                           nthreads=self.nthreads)
+            getpool = lambda: ProcessAndThreadPoolExecutor(nprocs=cfg.nprocs,
+                                                           nthreads=cfg.nthreads)
             useproc = True
 
         with getpool() as pool:
-            self.leaf_fprs = dict(pool.map(self._worker,
+            self.leaf_fprs = dict(pool.map(self._fpr_worker,
                                            self.tree.leafs.items(),
                                            chunksize=1))
 
-        if useproc and self.share_leafs:
+        if useproc and cfg.share_leafs:
             for leaf in self.tree.leafs.values():
                 leaf.fpr = self.leaf_fprs[leaf.path]
 
