@@ -357,8 +357,8 @@ class MerkleTree:
     # error is "Can't pickle ... lambda ...", same with defining _fpr_worker()
     # inside _calc_leaf_fprs(), need to def it in outer scope
     @staticmethod
-    def _fpr_worker(kv):
-        return kv[0], kv[1].fpr
+    def _fpr_worker(leaf):
+        return leaf.path, leaf.fpr
 
     def _calc_leaf_fprs(self):
         # whether we use multiprocessing
@@ -383,7 +383,7 @@ class MerkleTree:
 
         with getpool() as pool:
             self.leaf_fprs = dict(pool.map(self._fpr_worker,
-                                           self.tree.leafs.items(),
+                                           self.tree.leafs.values(),
                                            chunksize=1))
 
         if useproc and cfg.share_leafs:
@@ -391,7 +391,7 @@ class MerkleTree:
                 leaf.fpr = self.leaf_fprs[leaf.path]
 
     def _calc_node_fprs(self):
-        self.node_fprs = dict((k,v.fpr) for k,v in self.tree.nodes.items())
+        self.node_fprs = dict((node.path,node.fpr) for node in self.tree.nodes.values())
 
     def _calc_fprs(self):
         self._calc_leaf_fprs()
