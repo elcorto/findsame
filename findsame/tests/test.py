@@ -194,7 +194,7 @@ def test_auto_limit():
 
 
 def test_auto_limit_debug():
-    opts = "-l auto -L 150 -v"
+    opts = "-l auto -L 150 -c2 -v"
     cmd = f"{here}/../../bin/findsame {opts} {here}/data/limit/deep/files | \
              grep auto_limit | grep -v 'del leaf fpr'"
     out = subprocess.check_output(cmd, shell=True).decode().strip().replace(here + '/','')
