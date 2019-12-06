@@ -19,28 +19,24 @@ def hashsum(x):
     return HASHFUNC(x.encode()).hexdigest()
 
 
-def hash_file(fn, blocksize=None):
-    """Hash file content. Same as::
-
-        $ sha1sum <filename>
+def hash_file(leaf, blocksize=None):
+    """Hash file content, using filesize as additional info.
 
     Parameters
     ----------
-    fn : str
-        filename
+    leaf : Leaf
     blocksize : int
         size of block (bytes) to read at once
 
     Notes
     -----
-    idea stolen from: http://pythoncentral.io/hashing-files-with-python/
-
-    blocksize : avoid reading a big file completely into memory, blocksize=1
-        MiB is fastest, tested on Core i3, hash 500 MiB file, ~ 1s, sha1sum ~
-        1.5s
+    Using `blocksize` stolen from: http://pythoncentral.io/hashing-files-with-python/ .
+    Result is the same as e.g. ``sha1sum <filename>`` when leaf.filesize = ''
+    (zero length byte string).
     """
     hasher = HASHFUNC()
-    with open(fn, 'rb') as fd:
+    hasher.update(str(leaf.filesize).encode('ascii'))
+    with open(leaf.path, 'rb') as fd:
         buf = fd.read(blocksize)
         while buf:
             hasher.update(buf)
@@ -80,16 +76,17 @@ def adjust_blocksize(blocksize, limit):
     return bs
 
 
-def hash_file_limit(fn, blocksize=None, limit=None):
+def hash_file_limit(leaf, blocksize=None, limit=None):
     """Same as :func:`hash_file`, but stop at approximately `limit` bytes.
 
-    Slow reference implementation b/c of :func:`adjust_blocksize`. In production,
-    use `hash_file_limit_core`.
+    Slow reference implementation b/c of :func:`adjust_blocksize`. In
+    production, use `hash_file_limit_core`.
     """
-    return hash_file_limit_core(fn, adjust_blocksize(blocksize, limit), limit)
+    return hash_file_limit_core(leaf, adjust_blocksize(blocksize, limit),
+                                limit)
 
 
-def hash_file_limit_core(fn, blocksize=None, limit=None):
+def hash_file_limit_core(leaf, blocksize=None, limit=None):
     # These tests need to be here. Timing shows that they cost virtually
     # nothing. Only adjust_blocksize() is slow and was thus moved out.
     assert blocksize is not None and (blocksize > 0)
@@ -99,8 +96,9 @@ def hash_file_limit_core(fn, blocksize=None, limit=None):
     else:
         assert blocksize % limit == 0
     hasher = HASHFUNC()
+    hasher.update(str(leaf.filesize).encode('ascii'))
     size = 0
-    with open(fn, 'rb') as fd:
+    with open(leaf.path, 'rb') as fd:
         buf = fd.read(blocksize)
         size += len(buf)
         while buf and size <= limit:
@@ -166,9 +164,10 @@ class Leaf(Element):
         super().__init__(*args, **kwds)
         self.kind = 'leaf'
         self.fpr_func = fpr_func
+        self.filesize = os.path.getsize(self.path)
 
     def _get_fpr(self):
-        return self.fpr_func(self.path)
+        return self.fpr_func(self)
 
 
 class FileDirTree:
@@ -427,8 +426,7 @@ class MerkleTree:
         return set(itertools.chain(*(pp for pp in inv.values() if len(pp)>1)))
 
     def calc_fprs(self):
-        max_limit = max(os.path.getsize(leaf.path) for leaf in
-                        self.tree.leafs.values())
+        max_limit = max(leaf.filesize for leaf in self.tree.leafs.values())
         if cfg.limit == 'auto':
             assert cfg.auto_limit_converged > 1, ("auto_limit_converged must "
                                                   "be > 1")
