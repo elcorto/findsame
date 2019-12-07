@@ -1,10 +1,16 @@
-import subprocess, os, json, random, sys, hashlib
+import hashlib
+import json
+import os
+import random
+import subprocess
+import sys
+import tempfile
+
 from findsame import calc
 from findsame import common as co
 from findsame.config import cfg
+
 pj = os.path.join
-
-
 here = os.path.abspath(os.path.dirname(__file__))
 
 #-------------------------------------------------------------------------------
@@ -281,3 +287,23 @@ def test_walk_files():
             assert os.path.isfile(fn)
     sx = set(x)
     assert sx == sx2, sx - sx2
+
+
+def test_empty():
+    # delete=false b/c fd.close() would delete the file. We close it b/c it
+    # will be opened in hash_file() and opening an already open file does
+    # apparently not work on all platforms (it does on unix).
+    #
+    # When leaving the NamedTemporaryFile context, the context manager should
+    # delete the file, but that doesn't happen, thank you very much. Why do we
+    # have that fancy thing again??? Need to do that manually, so could just as
+    # well use good old mkstemp().
+    try:
+        with tempfile.NamedTemporaryFile(prefix='findsame_test_empty', delete=False) as fd:
+            fd.close()
+            assert os.path.exists(fd.name)
+            assert os.path.getsize(fd.name) == 0
+            assert calc.EMPTY_FILE_FPR == calc.hash_file(calc.Leaf(fd.name))
+    finally:
+        if os.path.exists(fd.name):
+            os.remove(fd.name)
