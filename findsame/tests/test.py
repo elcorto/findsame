@@ -60,9 +60,13 @@ def test_dict_equal():
 
 
 def test_hash_file():
+    # sha1
+    content_hash = '0a96c2e755258bd46abdde729f8ee97d234dd04e'
     fn = pj(os.path.dirname(__file__), 'data/lena.png')
-    assert calc.hash_file(fn) == hash_file_subprocess(fn) \
-        == '0a96c2e755258bd46abdde729f8ee97d234dd04e'
+    leaf = calc.Leaf(fn)
+    assert hash_file_subprocess(fn) == content_hash
+    assert calc.hash_file(leaf, use_filesize=False) == content_hash
+    assert calc.hash_file(leaf, use_filesize=True) != content_hash
 
 
 def test_adjust_blocksize():
