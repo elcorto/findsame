@@ -99,27 +99,28 @@ def adjust_blocksize(blocksize, limit):
     return bs
 
 
-def hash_file_limit(leaf, blocksize=None, limit=None):
+def hash_file_limit(leaf, blocksize=None, limit=None, use_filesize=True):
     """Same as :func:`hash_file`, but stop at approximately `limit` bytes.
 
     Slow reference implementation b/c of :func:`adjust_blocksize`. In
     production, use `hash_file_limit_core`.
     """
     return hash_file_limit_core(leaf, adjust_blocksize(blocksize, limit),
-                                limit)
+                                limit=limit, use_filesize=use_filesize)
 
 
-def hash_file_limit_core(leaf, blocksize=None, limit=None):
+def hash_file_limit_core(leaf, blocksize=None, limit=None, use_filesize=True):
     # These tests need to be here. Timing shows that they cost virtually
     # nothing. Only adjust_blocksize() is slow and was thus moved out.
-    assert blocksize is not None and (blocksize > 0)
-    assert (limit is not None) and (limit > 0)
+    assert blocksize is not None and (blocksize > 0), f"blocksize={blocksize}"
+    assert (limit is not None) and (limit > 0), f"limit={limit}"
     if blocksize < limit:
         assert limit % blocksize == 0
     else:
         assert blocksize % limit == 0
     hasher = HASHFUNC()
-    hasher.update(str(leaf.filesize).encode('ascii'))
+    if use_filesize:
+        hasher.update(str(leaf.filesize).encode('ascii'))
     size = 0
     with open(leaf.path, 'rb') as fd:
         buf = fd.read(blocksize)
