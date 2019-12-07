@@ -40,14 +40,15 @@ EMPTY_FILE_FPR = hashsum('0')
 EMPTY_DIR_FPR = hashsum('')
 
 
-def hash_file(leaf, blocksize=None):
+def hash_file(leaf, blocksize=None, use_filesize=True):
     """Hash file content, using filesize as additional info.
 
     Parameters
     ----------
     leaf : Leaf
-    blocksize : int
-        size of block (bytes) to read at once
+    blocksize : int, None
+        size of block (bytes) to read at once; None = read whole file
+    use_filesize : bool
 
     Notes
     -----
@@ -56,7 +57,8 @@ def hash_file(leaf, blocksize=None):
     (zero length byte string).
     """
     hasher = HASHFUNC()
-    hasher.update(str(leaf.filesize).encode('ascii'))
+    if use_filesize:
+        hasher.update(str(leaf.filesize).encode('ascii'))
     with open(leaf.path, 'rb') as fd:
         buf = fd.read(blocksize)
         while buf:
