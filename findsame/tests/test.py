@@ -186,9 +186,11 @@ def test_auto_limit():
     # and thus doesn't show up in canned reference results. Here we test it
     # explicitely and with another limit -L 30 were files are classified as
     # equal, i.e. auto_limit_min is too small.
+    #
+    # All test files have equal size, so only the limit will be effective here.
     for L in [30, 150]:
-        opts = f"-l auto -L {L} -o3"
-        cmd = f'{here}/../../bin/findsame {opts} {here}/data/limit/deep/files'
+        opts = f"-l auto -L {L} -c3 -o3"
+        cmd = f'{here}/../../bin/findsame {opts} {here}/data/limit'
         out = subprocess.check_output(cmd, shell=True).decode().strip().replace(here + '/','')
         ref_fn = f'{here}/ref_output_test_auto_limit_L_{L}'
         val, ref, comp = _preproc_json_o3(out, ref_fn)
@@ -197,12 +199,12 @@ def test_auto_limit():
 
 def test_auto_limit_debug():
     opts = "-l auto -L 150 -c2 -v"
-    cmd = f"{here}/../../bin/findsame {opts} {here}/data/limit/deep/files | \
+    cmd = f"{here}/../../bin/findsame {opts} {here}/data/limit | \
              grep auto_limit | grep -v 'del leaf fpr'"
-    out = subprocess.check_output(cmd, shell=True).decode().strip().replace(here + '/','')
+    val = subprocess.check_output(cmd, shell=True).decode().strip().replace(here + '/','')
     with open(f"{here}/ref_output_test_auto_limit_debug") as fd:
         ref = fd.read().strip()
-    assert out == ref
+    assert val == ref, f"val:\n{val}\nref:\n{ref}"
 
 
 def test_jq():
