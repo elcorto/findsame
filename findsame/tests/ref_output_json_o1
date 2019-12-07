@@ -6,19 +6,15 @@
     ]
   },
   {
-    "dir:empty": [
-      "data/dir2/empty_dir",
-      "data/dir2/empty_dir_copy",
-      "data/empty_dir",
-      "data/empty_dir_copy"
-    ],
-    "file:empty": [
-      "data/dir2/empty_dir/empty_file",
-      "data/dir2/empty_dir_copy/empty_file",
-      "data/empty_dir/empty_file",
-      "data/empty_dir_copy/empty_file",
-      "data/empty_file",
-      "data/empty_file_copy"
+    "dir": [
+      "data/dirs_empty_files/1",
+      "data/dirs_empty_files/1_other"
+    ]
+  },
+  {
+    "dir": [
+      "data/dirs_empty_files/2",
+      "data/dirs_empty_files/2_other"
     ]
   },
   {
@@ -32,6 +28,12 @@
   },
   {
     "file": [
+      "data/dir1/file3",
+      "data/dir1_copy/file3"
+    ]
+  },
+  {
+    "file": [
       "data/file1",
       "data/file1_copy"
     ]
@@ -40,6 +42,18 @@
     "file": [
       "data/lena.png",
       "data/lena_copy.png"
+    ]
+  },
+  {
+    "file:empty": [
+      "data/dirs_empty_files/1/empty_file",
+      "data/dirs_empty_files/1_other/empty_file_other",
+      "data/dirs_empty_files/2/empty_file",
+      "data/dirs_empty_files/2/empty_file_copy",
+      "data/dirs_empty_files/2_other/empty_bar",
+      "data/dirs_empty_files/2_other/empty_foo",
+      "data/empty_file",
+      "data/empty_file_copy"
     ]
   }
 ]
