@@ -27,6 +27,17 @@ def hash_file_subprocess(fn):
     return subprocess.getoutput(cmd.format(fn))
 
 
+def hash_file_nosize(fn, *, blocksize=None):
+    leaf = calc.Leaf(fn)
+    return calc.hash_file(leaf, blocksize=blocksize, use_filesize=False)
+
+
+def hash_file_limit_nosize(fn, *, blocksize=None, limit=None):
+    leaf = calc.Leaf(fn)
+    return calc.hash_file_limit(leaf, blocksize=blocksize, limit=limit,
+                                use_filesize=False)
+
+
 #-------------------------------------------------------------------------------
 # tests
 #-------------------------------------------------------------------------------
@@ -79,30 +90,31 @@ def test_adjust_blocksize():
 
 def test_hash_file_limit():
     bs = cfg.blocksize
-    file_200_a = pj(os.path.dirname(__file__), 'data/limit/deep/files/file_200_a')
-    file_200_a_200_b = pj(os.path.dirname(__file__), 'data/limit/deep/files/file_200_a_200_b')
+    file_200_a = pj(os.path.dirname(__file__), 'data/limit/other/file_200_a')
+    file_200_a_200_b = pj(os.path.dirname(__file__), 'data/limit/other/file_200_a_200_b')
     hashes = {file_200_a: 'e61cfffe0d9195a525fc6cf06ca2d77119c24a40',
               file_200_a_200_b: 'c29d2522ff37716a8aed11cec28555dd583d8497'}
-    assert hashes[file_200_a] == calc.hash_file(file_200_a) == \
+    assert hashes[file_200_a] == hash_file_nosize(file_200_a) == \
         hashlib.sha1(b'a'*200).hexdigest()
-    assert hashes[file_200_a_200_b] == calc.hash_file(file_200_a_200_b) == \
+    assert hashes[file_200_a_200_b] == hash_file_nosize(file_200_a_200_b) == \
         hashlib.sha1(b'a'*200 + b'b'*200).hexdigest()
     for bs in [10, 33, 199, 200, 201, 433, 500]:
         for fn,hsh in hashes.items():
-            assert calc.hash_file(fn, blocksize=bs) == hsh
+            assert hash_file_nosize(fn, blocksize=bs) == hsh
             for limit in [400, 401, 433, 600]:
-                val = calc.hash_file_limit(fn,
+                val = hash_file_limit_nosize(fn,
                                            blocksize=bs,
                                            limit=limit)
                 assert val == hsh, "failed: val={} hsh={} bs={} limit={}".format(
                     val, hsh, bs, limit)
-            assert calc.hash_file_limit(fn, blocksize=bs, limit=200) == \
+            assert hash_file_limit_nosize(fn, blocksize=bs, limit=200) == \
                     hashes[file_200_a]
     for limit in [1,33,199,200]:
-        assert calc.hash_file_limit(file_200_a_200_b, limit=limit, blocksize=bs) == \
-                calc.hash_file_limit(file_200_a, limit=limit, blocksize=bs) == \
-                calc.hash_file_limit(file_200_a_200_b, limit=limit, blocksize=bs) == \
+        assert hash_file_limit_nosize(file_200_a_200_b, limit=limit, blocksize=bs) == \
+                hash_file_limit_nosize(file_200_a, limit=limit, blocksize=bs) == \
+                hash_file_limit_nosize(file_200_a_200_b, limit=limit, blocksize=bs) == \
                 hashlib.sha1(b'a'*limit).hexdigest()
+
 
 def _cmp_o3(val, ref):
     if set(val.keys()) != set(ref.keys()):
