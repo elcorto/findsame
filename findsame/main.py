@@ -39,10 +39,10 @@ def assemble_result(merkle_tree):
         result = defaultdict(list)
     else:
         result = defaultdict(dict)
-    empty = calc.hashsum('')
-    for kind, inv_fprs in [('dir', merkle_tree.inverse_node_fprs()),
-                           ('file', merkle_tree.inverse_leaf_fprs())]:
-        for hsh, paths in inv_fprs.items():
+    cases = [('dir',  merkle_tree.inverse_node_fprs(), calc.EMPTY_DIR_FPR),
+             ('file', merkle_tree.inverse_leaf_fprs(), calc.EMPTY_FILE_FPR)]
+    for kind, inv_fprs, empty_fpr in cases:
+        for fpr, paths in inv_fprs.items():
             # exclude single items, only multiple fprs for now (hence the
             # name find*same* :)
             if len(paths) > 1:
@@ -61,14 +61,14 @@ def assemble_result(merkle_tree):
                     diffs = map(lambda x,y: y-x, lens[:-1], lens[1:])
                     if functools.reduce(lambda x,y: x == y == 1, diffs):
                         continue
-                if hsh == empty:
+                if fpr == empty_fpr:
                     typ = f'{kind}:empty'
                 else:
                     typ = f'{kind}'
                 if cfg.outmode == 3:
                     result[typ].append(paths)
                 else:
-                    result[hsh][typ] = result[hsh].get(typ, []) + paths
+                    result[fpr][typ] = result[fpr].get(typ, []) + paths
     if cfg.outmode == 1:
         return list(result.values())
     elif cfg.outmode in [2,3]:

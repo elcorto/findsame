@@ -11,12 +11,33 @@ from findsame.parallel import ProcessAndThreadPoolExecutor, \
     SequentialPoolExecutor
 from findsame.config import cfg
 
+
 HASHFUNC = hashlib.sha1
 
 
-def hashsum(x):
+def hashsum(x, encoding='utf-8'):
     """Hash of a string. Uses HASHFUNC."""
-    return HASHFUNC(x.encode()).hexdigest()
+    return HASHFUNC(x.encode(encoding=encoding)).hexdigest()
+
+
+# Hash of an empty file as returned by hash_file(): file content is '' but the
+# file size is 0 (an int) and the hash of '0' has another value than
+# hashsum(''). Encoding doesn't matter for '0' since ascii is a subset of all
+# of them up to code point 127.
+#
+# We have:
+#
+# empty file
+#   * filesize = 0,
+#   * fpr=hashsum('0') -- result of hash_file(Leaf('/path/to/empty_file'))
+# empty dir
+#   * zero files
+#   * fpr=hashsum('') -- definition
+# dirs with N empty files:
+#   * fpr = hashsum(N times hashsum('0'))
+#   * so all dirs with the same number of empty files will have the same hash
+EMPTY_FILE_FPR = hashsum('0')
+EMPTY_DIR_FPR = hashsum('')
 
 
 def hash_file(leaf, blocksize=None):
@@ -139,6 +160,13 @@ class Node(Element):
     def add_child(self, child):
         self.childs.append(child)
 
+    # The clean hashlib style way is smth like
+    #   hasher = HASHFUNC()
+    #   for fpr in sorted(fpr_lst):
+    #       hasher.update(fpr.encode())
+    #   ... etc ...
+    # instead of taking the hash of a concatenated string. Not that the
+    # resulting hash would chnage, it's just better style.
     @staticmethod
     def _merge_fpr(fpr_lst):
         """Hash of a list of fpr strings. Sort them first to ensure reproducible
@@ -147,13 +175,13 @@ class Node(Element):
         if nn > 1:
             return hashsum(''.join(sorted(fpr_lst)))
         elif nn == 1:
-            return fpr_lst[0]
+            return hashsum(fpr_lst[0])
         # no childs, this happen if
         # * we really have a node (=dir) w/o childs
         # * we have only links in the dir .. we currently treat
         #   that dir as empty since we ignore links
         else:
-            return hashsum('')
+            return EMPTY_DIR_FPR
 
     def _get_fpr(self):
         return self._merge_fpr([c.fpr for c in self.childs])
@@ -430,6 +458,7 @@ class MerkleTree:
         if cfg.limit == 'auto':
             assert cfg.auto_limit_converged > 1, ("auto_limit_converged must "
                                                   "be > 1")
+
             def itr(limit):
                 yield limit
                 while True:
@@ -439,6 +468,7 @@ class MerkleTree:
                     else:
                         co.debug_msg("auto_limit: limit > max file size, stop")
                         break
+
             limit_itr = itr(cfg.auto_limit_min)
             limit = next(limit_itr)
             self.set_leaf_fpr_func(limit)

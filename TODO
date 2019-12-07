@@ -20,10 +20,10 @@ imports
 -------
 Use package-local relative imports
 
-leaf fingerprints (fpr): use file size as well
-----------------------------------------------
-Use file size as well as content hash. Or do it iteratively (like some other
-tools):
-1) fpr = hash(file size)
-2) for remaining equals: fpr = hash(file or part of file, depening on --limit)
-3) Maybe only useful to incorporate into auto-limit iteration?
+dirs with only empty files
+--------------------------
+All dirs with the same number of empty files get have the same hash, i.e. the
+hash over N times the hash of the empty file. Since empty files are kind of a
+special case, this may be considered odd. In this case we could only check the
+file names to update the empty files' hashes and make them different such that
+they don't get reported.
