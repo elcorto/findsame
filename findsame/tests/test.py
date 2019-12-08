@@ -5,6 +5,7 @@ import random
 import subprocess
 import sys
 import tempfile
+import shutil
 
 from findsame import calc
 from findsame import common as co
@@ -166,31 +167,43 @@ def _preproc_json_o3(val, ref_fn):
 
 
 def test_cli():
-    cases = [('json_o2', '-o2', _preproc_json_o2, ''),
-             ('json_o1', '-o1', _preproc_json_o1, '| jq sort'),
-             ('json_o3', '-o3', _preproc_json_o3, ''),
-             ]
-    for name, outer_opts, preproc_func, post in cases:
-        # Test all combos only once which are not related to output formatting.
-        # json_o2: the hashes are the ones of the whole file, so all limit (-l)
-        # values must be bigger than the biggest file.
-        if name == 'json_o2':
-            opts_lst = ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K', '-l 128K',
-                        '-b 99K -l 500K']
-        else:
-            opts_lst = ['-l auto', '-l auto -L 8K', '-l auto -L 150']
-        for opts in opts_lst:
-            exe = f'{here}/../../bin/findsame {outer_opts} {opts}'
-            for args in ['data', 'data/*']:
-                cmd = f'{exe} {here}/{args} {post}'
-                print(cmd)
-                out = subprocess.check_output(cmd, shell=True)
-                out = out.decode()
-                out = out.replace(here + '/','')
-                print(out)
-                ref_fn = f'{here}/ref_output_{name}'
-                val, ref, comp = preproc_func(out, ref_fn)
-                assert comp(val, ref), f"{name}\nval:\n{val}\nref:\n{ref}"
+    cases = [('o1.json', '-o1', _preproc_json_o1, '| jq sort'),
+             ('o2.json', '-o2', _preproc_json_o2, ''),
+             ('o3.json', '-o3', _preproc_json_o3, '')]
+
+    try:
+        # God, there must be a stdlib way to do this less verbose! Sadly there
+        # is no mkdir(..., exist_ok=True)
+        for nn in [1,2]:
+            dr = f"data/empty_dir_{nn}"
+            if not os.path.exists(dr):
+                os.mkdir(dr)
+        for name, outer_opts, preproc_func, post in cases:
+            # Test all combos only once which are not related to output formatting.
+            # o2.json case: the hashes are the ones of the whole file, so all
+            # limit (-l) values must be bigger than the biggest file.
+            if name == 'o2.json':
+                opts_lst = ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K', '-l 128K',
+                            '-b 99K -l 500K']
+            else:
+                opts_lst = ['-l auto', '-l auto -L 8K', '-l auto -L 150']
+            for opts in opts_lst:
+                exe = f'{here}/../../bin/findsame {outer_opts} {opts}'
+                for args in ['data', 'data/*']:
+                    cmd = f'{exe} {here}/{args} {post}'
+                    print(cmd)
+                    out = subprocess.check_output(cmd, shell=True)
+                    out = out.decode()
+                    out = out.replace(here + '/','')
+                    print(out)
+                    ref_fn = f'{here}/ref_output_{name}'
+                    val, ref, comp = preproc_func(out, ref_fn)
+                    assert comp(val, ref), f"{name}\nval:\n{val}\nref:\n{ref}"
+    finally:
+        for nn in [1,2]:
+            dr = f"data/empty_dir_{nn}"
+            if os.path.exists(dr):
+                shutil.rmtree(dr)
 
 
 def test_auto_limit():

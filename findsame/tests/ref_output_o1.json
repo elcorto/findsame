@@ -18,6 +18,12 @@
     ]
   },
   {
+    "dir:empty": [
+      "data/empty_dir_1",
+      "data/empty_dir_2"
+    ]
+  },
+  {
     "file": [
       "data/dir1/file2",
       "data/dir1/file2_copy",

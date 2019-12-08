@@ -1,24 +1,26 @@
 {
-  "784a97bf1955d5f7a2b9dd6c1e371e17b73c42bc": {
-    "dir": [
+  "dir:empty": [
+    [
+      "data/empty_dir_1",
+      "data/empty_dir_2"
+    ]
+  ],
+  "dir": [
+    [
       "data/dirs_empty_files/1",
       "data/dirs_empty_files/1_other"
-    ]
-  },
-  "6625820b7d2bde76863a71d6f0f5a7d2b1e93a9a": {
-    "dir": [
+    ],
+    [
       "data/dirs_empty_files/2",
       "data/dirs_empty_files/2_other"
-    ]
-  },
-  "3c32d7199d6984f0f5753c147c9176dab3147745": {
-    "dir": [
+    ],
+    [
       "data/dir1",
       "data/dir1_copy"
     ]
-  },
-  "b6589fc6ab0dc82cf12099d1c2d40ab994e8410c": {
-    "file:empty": [
+  ],
+  "file:empty": [
+    [
       "data/dirs_empty_files/1/empty_file",
       "data/dirs_empty_files/1_other/empty_file_other",
       "data/dirs_empty_files/2/empty_file",
@@ -28,32 +30,26 @@
       "data/empty_file",
       "data/empty_file_copy"
     ]
-  },
-  "6aeda9dc73d3bfb30cd7f37b3602bd194334257d": {
-    "file": [
+  ],
+  "file": [
+    [
       "data/dir1/file2",
       "data/dir1/file2_copy",
       "data/dir1_copy/file2",
       "data/dir1_copy/file2_copy",
       "data/file2"
-    ]
-  },
-  "53022d66b04ff6963772ab2c30e8856b90b461d0": {
-    "file": [
+    ],
+    [
       "data/lena.png",
       "data/lena_copy.png"
-    ]
-  },
-  "b23967d6ac92dbf277c65e17ad73ab50d7cc16f9": {
-    "file": [
+    ],
+    [
       "data/file1",
       "data/file1_copy"
-    ]
-  },
-  "9e68aea54792876279d05a28b3bbe9fb64c4d822": {
-    "file": [
+    ],
+    [
       "data/dir1/file3",
       "data/dir1_copy/file3"
     ]
-  }
+  ]
 }
