@@ -147,8 +147,9 @@ class Element:
 
     @co.lazyprop
     def fpr(self):
-        co.debug_msg(f"fpr: {self.path}")
-        return self._get_fpr()
+        fpr = self._get_fpr()
+        co.debug_msg(f"fpr: {self.kind}={self.path} fpr={fpr}")
+        return fpr
 
     def _get_fpr(self):
         raise NotImplementedError
@@ -469,7 +470,9 @@ class MerkleTree:
                     if limit <= max_limit:
                         yield limit
                     else:
-                        co.debug_msg("auto_limit: limit > max file size, stop")
+                        co.debug_msg(f"auto_limit: limit={co.size2str(limit)} "
+                                     f"> max_file_size={co.size2str(max_limit)}, "
+                                     "stop")
                         break
 
             limit_itr = itr(cfg.auto_limit_min)
