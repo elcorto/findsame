@@ -458,12 +458,12 @@ class MerkleTree:
         return set(itertools.chain(*(pp for pp in inv.values() if len(pp)>1)))
 
     def calc_fprs(self):
-        max_limit = max(leaf.filesize for leaf in self.tree.leafs.values())
         if cfg.limit == 'auto':
             assert cfg.auto_limit_converged > 1, ("auto_limit_converged must "
                                                   "be > 1")
 
             def itr(limit):
+                max_limit = max(leaf.filesize for leaf in self.tree.leafs.values())
                 yield limit
                 while True:
                     limit = limit * cfg.auto_limit_increase_fac
