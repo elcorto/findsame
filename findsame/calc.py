@@ -67,67 +67,24 @@ def hash_file(leaf, blocksize=None, use_filesize=True):
     return hasher.hexdigest()
 
 
-def adjust_blocksize(blocksize, limit):
-    """Calculate a new `blocksize` that fits `limit` (size and modulo) such that we
-    never read beyond `limit`.
-
-    Parameters
-    ----------
-    blocksize : int
-    limit : int
-
-    Returns
-    -------
-    bs : int
-        new blocksize
-
-    Notes
-    -----
-    This function is slow and shall not be used in inner loops. That's why we
-    have :func:`hash_file_limit` for interactive use and
-    :func:`hash_file_limit_core` for inner loops.
-    """
-    bs = blocksize
-    li = limit
-    if li is not None:
-        assert li > 0, "limit must be > 0"
-        bs = li if bs > li else bs
-        if bs < li:
-            while li % bs != 0:
-                bs -= 1
-            assert bs > 0
-    return bs
-
-
 def hash_file_limit(leaf, blocksize=None, limit=None, use_filesize=True):
-    """Same as :func:`hash_file`, but stop at approximately `limit` bytes.
-
-    Slow reference implementation b/c of :func:`adjust_blocksize`. In
-    production, use `hash_file_limit_core`.
-    """
-    return hash_file_limit_core(leaf, adjust_blocksize(blocksize, limit),
-                                limit=limit, use_filesize=use_filesize)
-
-
-def hash_file_limit_core(leaf, blocksize=None, limit=None, use_filesize=True):
+    """Same as :func:`hash_file`, but read only exactly `limit` bytes."""
     # These tests need to be here. Timing shows that they cost virtually
-    # nothing. Only adjust_blocksize() is slow and was thus moved out.
+    # nothing.
     assert blocksize is not None and (blocksize > 0), f"blocksize={blocksize}"
     assert (limit is not None) and (limit > 0), f"limit={limit}"
-    if blocksize < limit:
-        assert limit % blocksize == 0
-    else:
-        assert blocksize % limit == 0
+    bs = blocksize if blocksize < limit else limit
+    assert limit % bs == 0, f"limit={co.size2str(limit)} % bs={co.size2str(bs)} != 0"
     hasher = HASHFUNC()
     if use_filesize:
         hasher.update(str(leaf.filesize).encode('ascii'))
     size = 0
     with open(leaf.path, 'rb') as fd:
-        buf = fd.read(blocksize)
+        buf = fd.read(bs)
         size += len(buf)
         while buf and size <= limit:
             hasher.update(buf)
-            buf = fd.read(blocksize)
+            buf = fd.read(bs)
             size += len(buf)
     return hasher.hexdigest()
 
@@ -430,14 +387,14 @@ class MerkleTree:
         self._calc_node_fprs()
 
     def set_leaf_fpr_func(self, limit):
-        bs = adjust_blocksize(cfg.blocksize, limit)
         if limit is None:
             leaf_fpr_func = functools.partial(hash_file,
-                                              blocksize=bs)
+                                              blocksize=cfg.blocksize)
         else:
-            leaf_fpr_func = functools.partial(hash_file_limit_core,
-                                              blocksize=bs,
-                                              limit=limit)
+            leaf_fpr_func = functools.partial(hash_file_limit,
+                                              blocksize=cfg.blocksize,
+                                              limit=limit,
+                                              use_filesize=True)
 
         for leaf in self.tree.leafs.values():
             leaf.fpr_func = leaf_fpr_func

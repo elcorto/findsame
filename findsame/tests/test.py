@@ -130,14 +130,6 @@ def test_hash_file():
     assert calc.hash_file(leaf, use_filesize=True) != content_hash
 
 
-def test_adjust_blocksize():
-    limit = 5
-    for blocksize in [1,2,3,4]:
-        assert calc.adjust_blocksize(blocksize, limit) == 1
-    for blocksize in [5,6,7]:
-        assert calc.adjust_blocksize(blocksize, limit) == 5
-
-
 def test_hash_file_limit():
     bs = cfg.blocksize
     file_200_a = pj(os.path.dirname(__file__), 'data/limit/other/file_200_a')
@@ -148,10 +140,10 @@ def test_hash_file_limit():
         hashlib.sha1(b'a'*200).hexdigest()
     assert hashes[file_200_a_200_b] == hash_file_nosize(file_200_a_200_b) == \
         hashlib.sha1(b'a'*200 + b'b'*200).hexdigest()
-    for bs in [10, 33, 199, 200, 201, 433, 500]:
+    for bs in [10, 100, 200, 400]:
         for fn,hsh in hashes.items():
             assert hash_file_nosize(fn, blocksize=bs) == hsh
-            for limit in [400, 401, 433, 600]:
+            for limit in [400, 800]:
                 val = hash_file_limit_nosize(fn,
                                            blocksize=bs,
                                            limit=limit)
@@ -159,6 +151,7 @@ def test_hash_file_limit():
                     val, hsh, bs, limit)
             assert hash_file_limit_nosize(fn, blocksize=bs, limit=200) == \
                     hashes[file_200_a]
+    bs = 200
     for limit in [1,33,199,200]:
         assert hash_file_limit_nosize(file_200_a_200_b, limit=limit, blocksize=bs) == \
                 hash_file_limit_nosize(file_200_a, limit=limit, blocksize=bs) == \
@@ -184,7 +177,7 @@ def test_cli():
             # limit (-l) values must be bigger than the biggest file.
             if name == 'o2.json':
                 opts_lst = ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K', '-l 128K',
-                            '-b 99K -l 500K']
+                            '-b 100K -l 400K']
             else:
                 opts_lst = ['-l auto', '-l auto -L 8K', '-l auto -L 150']
             for opts in opts_lst:

@@ -249,7 +249,7 @@ def bench_main_parallel_2d(tmpdir, maxsize):
 
 
 def worker_bench_hash_file_parallel(fn):
-    return calc.hash_file(fn, blocksize=256*KiB)
+    return calc.hash_file(calc.Leaf(fn), blocksize=256*KiB)
 
 
 def bench_hash_file_parallel(tmpdir, maxsize):
