@@ -39,6 +39,55 @@ def hash_file_limit_nosize(fn, *, blocksize=None, limit=None):
                                 use_filesize=False)
 
 
+def cmp_o3(val, ref):
+    if set(val.keys()) != set(ref.keys()):
+        print("dict keys not equal")
+        return False
+    # key = file, dir, file:empty, dir:empty
+    # val_lst = [[file1, file2, ...],
+    #            [...],
+    #            ...]
+    # The sub-lists in val_lst (and ref_lst=ref[key]) can be in random order,
+    # as is the order of the paths within each list. It is only important that
+    # all same-hash paths are present in their sub-list. Therefore we loop over
+    # lists, compare sets and count the number of matches.
+    for key,val_lst in val.items():
+        nsub = len(val_lst)
+        if len(ref[key]) != nsub:
+            print("not same number of sub-lists")
+            return False
+        cnt = 0
+        for val_sub_lst in val_lst:
+            for ref_sub_lst in ref[key]:
+                if set(ref_sub_lst) == set(val_sub_lst):
+                    cnt += 1
+        if cnt != nsub:
+            print(f"not exactly {cnt} equal sub-lists")
+            return False
+    return True
+
+
+def preproc_json_o2(val, ref_fn):
+    val = json.loads(val)
+    with open(ref_fn) as fd:
+        ref = json.load(fd)
+    return val, ref, lambda x,y: co.dict_equal(x, y)
+
+
+def preproc_json_o1(val, ref_fn):
+    val = json.loads(val)
+    with open(ref_fn) as fd:
+        ref = json.load(fd)
+    return val, ref, lambda x,y: x == y
+
+
+def preproc_json_o3(val, ref_fn):
+    val = json.loads(val)
+    with open(ref_fn) as fd:
+        ref = json.load(fd)
+    return val, ref, cmp_o3
+
+
 #-------------------------------------------------------------------------------
 # tests
 #-------------------------------------------------------------------------------
@@ -117,59 +166,10 @@ def test_hash_file_limit():
                 hashlib.sha1(b'a'*limit).hexdigest()
 
 
-def _cmp_o3(val, ref):
-    if set(val.keys()) != set(ref.keys()):
-        print("dict keys not equal")
-        return False
-    # key = file, dir, file:empty, dir:empty
-    # val_lst = [[file1, file2, ...],
-    #            [...],
-    #            ...]
-    # The sub-lists in val_lst (and ref_lst=ref[key]) can be in random order,
-    # as is the order of the paths within each list. It is only important that
-    # all same-hash paths are present in their sub-list. Therefore we loop over
-    # lists, compare sets and count the number of matches.
-    for key,val_lst in val.items():
-        nsub = len(val_lst)
-        if len(ref[key]) != nsub:
-            print("not same number of sub-lists")
-            return False
-        cnt = 0
-        for val_sub_lst in val_lst:
-            for ref_sub_lst in ref[key]:
-                if set(ref_sub_lst) == set(val_sub_lst):
-                    cnt += 1
-        if cnt != nsub:
-            print(f"not exactly {cnt} equal sub-lists")
-            return False
-    return True
-
-
-def _preproc_json_o2(val, ref_fn):
-    val = json.loads(val)
-    with open(ref_fn) as fd:
-        ref = json.load(fd)
-    return val, ref, lambda x,y: co.dict_equal(x, y)
-
-
-def _preproc_json_o1(val, ref_fn):
-    val = json.loads(val)
-    with open(ref_fn) as fd:
-        ref = json.load(fd)
-    return val, ref, lambda x,y: x == y
-
-
-def _preproc_json_o3(val, ref_fn):
-    val = json.loads(val)
-    with open(ref_fn) as fd:
-        ref = json.load(fd)
-    return val, ref, _cmp_o3
-
-
 def test_cli():
-    cases = [('o1.json', '-o1', _preproc_json_o1, '| jq sort'),
-             ('o2.json', '-o2', _preproc_json_o2, ''),
-             ('o3.json', '-o3', _preproc_json_o3, '')]
+    cases = [('o1.json', '-o1', preproc_json_o1, '| jq sort'),
+             ('o2.json', '-o2', preproc_json_o2, ''),
+             ('o3.json', '-o3', preproc_json_o3, '')]
 
     try:
         # God, there must be a stdlib way to do this less verbose! Sadly there
@@ -218,7 +218,7 @@ def test_auto_limit():
         cmd = f'{here}/../../bin/findsame {opts} {here}/data/limit'
         out = subprocess.check_output(cmd, shell=True).decode().strip().replace(here + '/','')
         ref_fn = f'{here}/ref_output_test_auto_limit_L_{L}'
-        val, ref, comp = _preproc_json_o3(out, ref_fn)
+        val, ref, comp = preproc_json_o3(out, ref_fn)
         assert comp(val, ref), f"{ref_fn}\nval:\n{val}\nref:\n{ref}"
 
 
