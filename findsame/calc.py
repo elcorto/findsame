@@ -78,14 +78,12 @@ def hash_file_limit(leaf, blocksize=None, limit=None, use_filesize=True):
     hasher = HASHFUNC()
     if use_filesize:
         hasher.update(str(leaf.filesize).encode('ascii'))
-    size = 0
     with open(leaf.path, 'rb') as fd:
-        buf = fd.read(bs)
-        size += len(buf)
-        while buf and size <= limit:
-            hasher.update(buf)
-            buf = fd.read(bs)
-            size += len(buf)
+        while True:
+            pos = fd.tell()
+            if pos == leaf.filesize or pos == limit:
+                break
+            hasher.update(fd.read(bs))
     return hasher.hexdigest()
 
 
