@@ -175,7 +175,7 @@ def test_cli():
         # God, there must be a stdlib way to do this less verbose! Sadly there
         # is no mkdir(..., exist_ok=True)
         for nn in [1,2]:
-            dr = f"data/empty_dir_{nn}"
+            dr = f"{here}/data/empty_dir_{nn}"
             if not os.path.exists(dr):
                 os.mkdir(dr)
         for name, outer_opts, preproc_func, post in cases:
