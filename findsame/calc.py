@@ -257,7 +257,8 @@ class FileDirTree:
         """
         dct = defaultdict(list)
         for fn in files:
-            dct[os.path.dirname(fn)].append(os.path.basename(fn))
+            _dn = os.path.dirname(fn)
+            dct[os.path.curdir if _dn == '' else _dn].append(os.path.basename(fn))
         for root, files in dct.items():
             yield root,None,files
 

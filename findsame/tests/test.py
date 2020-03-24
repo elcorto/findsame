@@ -330,3 +330,8 @@ def test_empty():
     finally:
         if os.path.exists(fd.name):
             os.remove(fd.name)
+
+
+def test_file_in_cwd():
+    cmd = f"cd {here}/data; pwd; {here}/../../bin/findsame *"
+    print(subprocess.check_output(cmd, shell=True).decode())
