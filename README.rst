@@ -41,8 +41,8 @@ Usage
 
 ::
 
-    usage: findsame [-h] [-b BLOCKSIZE] [-l LIMIT] [-L AUTO_LIMIT_MIN] [-p NPROCS]
-                    [-t NTHREADS] [-o OUTMODE] [-v]
+    usage: findsame [-h] [-b BLOCKSIZE] [-l LIMIT] [-p NPROCS] [-t NTHREADS]
+                    [-o OUTMODE] [-v]
                     file/dir [file/dir ...]
 
     Find same files and dirs based on file hashes.
@@ -54,17 +54,14 @@ Usage
       -h, --help            show this help message and exit
       -b BLOCKSIZE, --blocksize BLOCKSIZE
                             blocksize in hash calculation, use units K,M,G as in
-                            100M, 218K or just 1024 (bytes) [default: 256.0K]
+                            100M, 256K or just 1024 (bytes), if LIMIT is used and
+                            BLOCKSIZE < LIMIT then we require mod(LIMIT,
+                            BLOCKSIZE) = 0 else we set BLOCKSIZE = LIMIT [default:
+                            256.0K]
       -l LIMIT, --limit LIMIT
-                            read limit (bytes or 'auto'), if bytes then same units
-                            as for BLOCKSIZE apply, calculate hash only over the
-                            first LIMIT bytes, makes things go faster for may
-                            large files, try 500K [default: None], use 'auto' to
-                            try to determine the smallest value necessary
-                            automatically
-      -L AUTO_LIMIT_MIN, --auto-limit-min AUTO_LIMIT_MIN
-                            start value for auto LIMIT calculation when --limit
-                            auto is used [default: 8.0K]
+                            read limit (bytes, see also BLOCKSIZE), calculate hash
+                            only over the first LIMIT bytes, makes things go
+                            faster for may large files, try 512K [default: None]
       -p NPROCS, --nprocs NPROCS
                             number of parallel processes [default: 1]
       -t NTHREADS, --nthreads NTHREADS
@@ -153,54 +150,16 @@ By default, we use ``--nthreads`` equal to the number of cores. See
 Limit data to be hashed
 -----------------------
 
-Static limit
-~~~~~~~~~~~~
 Apart from parallelization, by far the most speed is gained by using
 ``--limit``. Note that this may lead to false positives, if files are exactly
 equal in the first ``LIMIT`` bytes. Finding a good enough value can be done by
-trial and error. Try 500K. This is still quite fast and seems to cover most
+trial and error. Try 512K. This is still quite fast and seems to cover most
 real-world data.
-
-Automatic optimal limit
-~~~~~~~~~~~~~~~~~~~~~~~
-We have an *experimental* feature where we iteratively increase ``LIMIT`` to
-find the smallest possible value. In every iteration, we increase the last
-limit by multiplying with ``config.cfg.auto_limit_increase_fac``, with that
-re-calculate only the hash of files that have the same hash as others within
-the last ``LIMIT`` and check whether their new hashes are now different. This
-works but hasn't been extensively benchmarked. The assumption is that a small
-number of iterations on a subset of all files (those reported equal so far)
-converges quickly and is still faster than a non-optimal ``LIMIT`` or even no
-limit at all when you have many big files (as in GiB).
-
-Related options and defaults:
-
-* ``--limit auto``
-* ``--auto-limit-min 8K`` = ``config.cfg.auto_limit_min``
-* ``config.cfg.auto_limit_increase_fac=2`` (no cmd line so far)
-
-Observations so far:
-
-Convergence corner cases: When files are equal in a good chunk at file start
-and ``auto_limit_min`` is small, then the first few iterations show no change
-in files being equal (which we use to detect converged limit values). To
-circumvent early converge here, we iterate until the number of equal files
-changes. The worst case scenario is that ``auto_limit_min`` is already optimal.
-Since there is no way to determine that a priori, we will iterate until limit
-hits the biggest file size, which may be slow. That is why it is important to
-choose ``auto_limit_min`` small enough.
-
-``auto_limit_min``: Don't use very small values such as 20 (that is 20 bytes).
-We found that this can converge to a local optimum (converged but too many
-equal files reported), depending in the structure of the headers of the files
-you compare. Stick with something like a small multiple of the blocksize of
-your file system (we use 8K).
-
 
 Tests
 =====
 
-Run ``nosetests3`` (maybe ``apt install python3-nose`` before (Debian)).
+Run ``nosetests``, ``pytest`` or any other test runner with test discovery.
 
 
 Benchmarks

@@ -175,11 +175,8 @@ def test_cli():
             # Test all combos only once which are not related to output formatting.
             # o2.json case: the hashes are the ones of the whole file, so all
             # limit (-l) values must be bigger than the biggest file.
-            if name == 'o2.json':
-                opts_lst = ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K', '-l 128K',
-                            '-b 100K -l 400K']
-            else:
-                opts_lst = ['-l auto', '-l auto -L 8K', '-l auto -L 150']
+            opts_lst = ['', '-p 2', '-t 2', '-p2 -t2', '-b 512K', '-l 128K',
+                        '-b 100K -l 400K']
             for opts in opts_lst:
                 exe = f'{here}/../../bin/findsame {outer_opts} {opts}'
                 for args in ['data', 'data/*']:
@@ -197,32 +194,6 @@ def test_cli():
             dr = f"data/empty_dir_{nn}"
             if os.path.exists(dr):
                 shutil.rmtree(dr)
-
-
-def test_auto_limit():
-    # The case -L 150 is already covered in test_cli() since the result is {}
-    # and thus doesn't show up in canned reference results. Here we test it
-    # explicitely and with another limit -L 30 were files are classified as
-    # equal, i.e. auto_limit_min is too small.
-    #
-    # All test files have equal size, so only the limit will be effective here.
-    for L in [30, 150]:
-        opts = f"-l auto -L {L} -c3 -o3"
-        cmd = f'{here}/../../bin/findsame {opts} {here}/data/limit'
-        out = subprocess.check_output(cmd, shell=True).decode().strip().replace(here + '/','')
-        ref_fn = f'{here}/ref_output_test_auto_limit_L_{L}'
-        val, ref, comp = preproc_json_o3(out, ref_fn)
-        assert comp(val, ref), f"{ref_fn}\nval:\n{val}\nref:\n{ref}"
-
-
-def test_auto_limit_debug():
-    opts = "-l auto -L 150 -c2 -v"
-    cmd = f"{here}/../../bin/findsame {opts} {here}/data/limit | \
-             grep auto_limit | grep -v 'del leaf fpr'"
-    val = subprocess.check_output(cmd, shell=True).decode().strip().replace(here + '/','')
-    with open(f"{here}/ref_output_test_auto_limit_debug") as fd:
-        ref = fd.read().strip()
-    assert val == ref, f"val:\n{val}\nref:\n{ref}"
 
 
 def test_jq():

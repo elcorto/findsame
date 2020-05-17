@@ -69,8 +69,11 @@ def hash_file(leaf, blocksize=None, use_filesize=True):
 
 def hash_file_limit(leaf, blocksize=None, limit=None, use_filesize=True):
     """Same as :func:`hash_file`, but read only exactly `limit` bytes."""
-    # These tests need to be here. Timing shows that they cost virtually
-    # nothing.
+    # We have the same code (adjust blocksize, assert modulo) in the main
+    # script as early exit check, but this function may also be used elsewhere
+    # (benckmark, tests) w/o being called in MerkleTree where the already
+    # correct values cfg.blocksize and cfg.limit are used to call us here, so
+    # we need this. Timing shows that all asserts here cost virtually nothing.
     assert blocksize is not None and (blocksize > 0), f"blocksize={blocksize}"
     assert (limit is not None) and (limit > 0), f"limit={limit}"
     bs = blocksize if blocksize < limit else limit
@@ -414,50 +417,5 @@ class MerkleTree:
         return set(itertools.chain(*(pp for pp in inv.values() if len(pp)>1)))
 
     def calc_fprs(self):
-        if cfg.limit == 'auto':
-            assert cfg.auto_limit_converged > 1, ("auto_limit_converged must "
-                                                  "be > 1")
-
-            def itr(limit):
-                max_limit = max(leaf.filesize for leaf in self.tree.leafs.values())
-                yield limit
-                while True:
-                    limit = limit * cfg.auto_limit_increase_fac
-                    if limit <= max_limit:
-                        yield limit
-                    else:
-                        co.debug_msg(f"auto_limit: limit={co.size2str(limit)} "
-                                     f"> max_file_size={co.size2str(max_limit)}, "
-                                     "stop")
-                        break
-
-            limit_itr = itr(cfg.auto_limit_min)
-            limit = next(limit_itr)
-            self.set_leaf_fpr_func(limit)
-            self._calc_leaf_fprs()
-            slm = self._same_leafs_merged()
-            co.debug_msg(f"auto_limit: limit={co.size2str(limit):10} "
-                         f"# same leafs = {len(slm)}")
-            slm_old = slm
-            same_cnt = 1
-            for limit in limit_itr:
-                for path in slm:
-                    del self.tree.leafs[path].fpr
-                    co.debug_msg(f"auto_limit: del leaf fpr: {path}")
-                self.set_leaf_fpr_func(limit)
-                self._calc_leaf_fprs()
-                slm = self._same_leafs_merged()
-                co.debug_msg(f"auto_limit: limit={co.size2str(limit):10} "
-                             f"# same leafs = {len(slm)}")
-                if len(slm_old) == len(slm):
-                    same_cnt += 1
-                    if same_cnt == cfg.auto_limit_converged:
-                        co.debug_msg(f"auto_limit: converged")
-                        break
-                else:
-                    slm_old = slm
-                    same_cnt = 1
-            self._calc_node_fprs()
-        else:
-            self.set_leaf_fpr_func(cfg.limit)
-            self._calc_fprs()
+        self.set_leaf_fpr_func(cfg.limit)
+        self._calc_fprs()
