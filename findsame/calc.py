@@ -52,9 +52,10 @@ def hash_file(leaf, blocksize=None, use_filesize=True):
 
     Notes
     -----
-    Using `blocksize` stolen from: http://pythoncentral.io/hashing-files-with-python/ .
-    Result is the same as e.g. ``sha1sum <filename>`` when leaf.filesize = ''
-    (zero length byte string).
+    Using `blocksize` stolen from:
+    http://pythoncentral.io/hashing-files-with-python/ . Result is the same as
+    e.g. ``sha1sum <filename>`` when use_filesize=False (or as a hack we set
+    leaf.filesize = '' (zero length byte string)).
     """
     hasher = HASHFUNC()
     if use_filesize:
@@ -299,6 +300,10 @@ class MerkleTree:
 
     _calc_leaf_fprs(): share_leafs
     ------------------------------
+    Note: This applies ONLY to ProcessPoolExecutor, i.e. multiprocessing, which
+    NOT the fastest parallelization method here (ThreadPoolExecutor, i.e.
+    multithreading is better).
+
     The calculation of self.node_fprs in _calc_node_fprs() causes a slowdown
     with ProcessPoolExecutor if we do not assign calculated leaf fprs
     beforehand. This is b/c when calculating node_fprs, we do not operate on
@@ -327,7 +332,7 @@ class MerkleTree:
        path7: fprD,
        ...}
 
-    inverse_*_fprs:
+    invert_dict(leaf_fprs), invert_dict(node_fprs):
        fprA: [path1, path2],
        fprB: [path3],
        fprC: [path4],
@@ -341,16 +346,31 @@ class MerkleTree:
         tree : FileDirTree instance
         """
         self.tree = tree
-        self.calc_fprs()
+        self.set_leaf_fpr_func(cfg.limit)
+        self.calc_leaf_fprs()
+        self.calc_node_fprs()
+
+    def set_leaf_fpr_func(self, limit):
+        if limit is None:
+            leaf_fpr_func = functools.partial(hash_file,
+                                              blocksize=cfg.blocksize)
+        else:
+            leaf_fpr_func = functools.partial(hash_file_limit,
+                                              blocksize=cfg.blocksize,
+                                              limit=limit,
+                                              use_filesize=True)
+
+        for leaf in self.tree.leafs.values():
+            leaf.fpr_func = leaf_fpr_func
 
     # pool.map(lambda kv: (k, v.fpr), ...) in _calc_leaf_fprs() doesn't work,
     # error is "Can't pickle ... lambda ...", same with defining _fpr_worker()
     # inside _calc_leaf_fprs(), need to def it in outer scope
     @staticmethod
-    def _fpr_worker(leaf):
+    def fpr_worker(leaf):
         return leaf.path, leaf.fpr
 
-    def _calc_leaf_fprs(self):
+    def calc_leaf_fprs(self):
         # whether we use multiprocessing
         useproc = False
 
@@ -372,7 +392,7 @@ class MerkleTree:
             useproc = True
 
         with getpool() as pool:
-            self.leaf_fprs = dict(pool.map(self._fpr_worker,
+            self.leaf_fprs = dict(pool.map(self.fpr_worker,
                                            self.tree.leafs.values(),
                                            chunksize=1))
 
@@ -380,42 +400,5 @@ class MerkleTree:
             for leaf in self.tree.leafs.values():
                 leaf.fpr = self.leaf_fprs[leaf.path]
 
-    def _calc_node_fprs(self):
+    def calc_node_fprs(self):
         self.node_fprs = dict((node.path,node.fpr) for node in self.tree.nodes.values())
-
-    def _calc_fprs(self):
-        self._calc_leaf_fprs()
-        self._calc_node_fprs()
-
-    def set_leaf_fpr_func(self, limit):
-        if limit is None:
-            leaf_fpr_func = functools.partial(hash_file,
-                                              blocksize=cfg.blocksize)
-        else:
-            leaf_fpr_func = functools.partial(hash_file_limit,
-                                              blocksize=cfg.blocksize,
-                                              limit=limit,
-                                              use_filesize=True)
-
-        for leaf in self.tree.leafs.values():
-            leaf.fpr_func = leaf_fpr_func
-
-    def inverse_leaf_fprs(self):
-        return co.invert_dict(self.leaf_fprs)
-
-    def inverse_node_fprs(self):
-        return co.invert_dict(self.node_fprs)
-
-    def _same_leafs_merged(self):
-        """
-        Returns
-        -------
-        set
-            {path1, path2, path5, path6, path7}
-        """
-        inv = self.inverse_leaf_fprs()
-        return set(itertools.chain(*(pp for pp in inv.values() if len(pp)>1)))
-
-    def calc_fprs(self):
-        self.set_leaf_fpr_func(cfg.limit)
-        self._calc_fprs()

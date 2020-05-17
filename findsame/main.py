@@ -39,8 +39,8 @@ def assemble_result(merkle_tree):
         result = defaultdict(list)
     else:
         result = defaultdict(dict)
-    cases = [('dir',  merkle_tree.inverse_node_fprs(), calc.EMPTY_DIR_FPR),
-             ('file', merkle_tree.inverse_leaf_fprs(), calc.EMPTY_FILE_FPR)]
+    cases = [('dir',  co.invert_dict(merkle_tree.node_fprs), calc.EMPTY_DIR_FPR),
+             ('file', co.invert_dict(merkle_tree.leaf_fprs), calc.EMPTY_FILE_FPR)]
     for kind, inv_fprs, empty_fpr in cases:
         for fpr, paths in inv_fprs.items():
             # exclude single items, only multiple fprs for now (hence the
