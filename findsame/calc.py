@@ -244,14 +244,15 @@ class FileDirTree:
             for base in files:
                 fn = os.path.join(root, base)
                 co.debug_msg(f"build_tree: {fn}")
-                # skip links
+                # isfile(<link>) is True, has to be tested first
                 if os.path.islink(fn):
                     co.debug_msg(f"skip link: {fn}")
-                    continue
-                assert os.path.isfile(fn), fn
-                leaf = Leaf(path=fn)
-                node.add_child(leaf)
-                self.leafs[fn] = leaf
+                elif os.path.isfile(fn):
+                    leaf = Leaf(path=fn)
+                    node.add_child(leaf)
+                    self.leafs[fn] = leaf
+                else:
+                    co.debug_msg(f"skip unknown path type: {fn}")
             # add node as child to parent node
             # root        = /foo/bar/baz
             # parent_root = /foo/bar
