@@ -21,9 +21,9 @@ def hashsum(x, encoding='utf-8'):
 
 
 # Hash of an empty file as returned by hash_file(): file content is '' but the
-# file size is 0 (an int) and the hash of '0' has another value than
-# hashsum(''). Encoding doesn't matter for '0' since ascii is a subset of all
-# of them up to code point 127.
+# file size is 0 (an int). Since we hash size and content and hashsum('0') !=
+# hashsum(''), we have to use the former. The encoding doesn't matter for '0'
+# since ascii is a subset of e.g. utf-8 up to code point 127.
 #
 # We have:
 #
@@ -38,6 +38,21 @@ def hashsum(x, encoding='utf-8'):
 #   * so all dirs with the same number of empty files will have the same hash
 EMPTY_FILE_FPR = hashsum('0')
 EMPTY_DIR_FPR = hashsum('')
+
+# Short-lived files that are collected while scanning the file system and
+# building the tree can be gone by the time we calculate hashes. In that case
+# we could either
+#   * delete them from the tree
+#   * return a pre-defined hash
+# We do the latter. hash of -1 and -2 represent the hash of an empty file with
+# negative size, which is impossible for existing files, so this should be a
+# safe operation.
+#
+# Removal from the tree is trivial for files, but for dirs, we'd need to
+# recursively delete all dirs and files below, which sounds like much more
+# work.
+MISSING_FILE_FPR = hashsum('-1')
+MISSING_DIR_FPR = hashsum('-2')
 
 
 def hash_file(leaf, blocksize=None, use_filesize=True):
@@ -147,7 +162,10 @@ class Node(Element):
             return EMPTY_DIR_FPR
 
     def _get_fpr(self):
-        return self._merge_fpr([c.fpr for c in self.childs])
+        if os.path.exists(self.path):
+            return self._merge_fpr([c.fpr for c in self.childs])
+        else:
+            return MISSING_DIR_FPR
 
 
 class Leaf(Element):
@@ -158,7 +176,10 @@ class Leaf(Element):
         self.filesize = os.path.getsize(self.path)
 
     def _get_fpr(self):
-        return self.fpr_func(self)
+        if os.path.exists(self.path):
+            return self.fpr_func(self)
+        else:
+            return MISSING_FILE_FPR
 
 
 class FileDirTree:
