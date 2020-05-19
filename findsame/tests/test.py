@@ -6,8 +6,9 @@ import subprocess
 import sys
 import tempfile
 import shutil
+import pathlib
 
-from findsame import calc
+from findsame import calc, main
 from findsame import common as co
 from findsame.config import cfg
 
@@ -299,3 +300,57 @@ def test_empty():
 def test_file_in_cwd():
     cmd = f"cd {here}/data; pwd; {here}/../../bin/findsame *"
     print(subprocess.check_output(cmd, shell=True).decode())
+
+
+def test_missing():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Copy test data to tmpdir, create "missing" files/dirs.
+        data_dir = shutil.copytree(f"{here}/data", f"{tmpdir}/data")
+        missing_files = [f"{data_dir}/missing_file_{x}" for x in [1,2,3]]
+        missing_dirs = [f"{data_dir}/missing_dir_{x}" for x in [1,2,3]]
+        for fn in missing_files:
+            pathlib.Path(fn).touch()
+            assert os.path.exists(fn)
+        for dn in missing_dirs:
+            os.makedirs(dn)
+            assert os.path.exists(fn)
+
+        # Create tree, don't calc hashes. By now, MerkleTree.tree (which is a
+        # FileDirTree instance) has the "missing" path names and beliefs for
+        # them to exist.
+        mt = main.get_merkle_tree([data_dir])
+        for miss_paths, paths in [(missing_files, mt.tree.leafs.keys()),
+                                  (missing_dirs, mt.tree.nodes.keys())]:
+            s_miss_paths = set(miss_paths)
+            assert len(s_miss_paths) == 3
+            assert s_miss_paths < set(paths)
+
+        # Remove those now before hashing. We don't delete them from the tree,
+        # so MerkleTree will attampt to calculate a hash for them.
+        for fn in missing_files:
+            os.remove(fn)
+            assert not os.path.exists(fn)
+
+        for dn in missing_dirs:
+            os.rmdir(dn)
+            assert not os.path.exists(dn)
+
+        # Calculate hashes. The missing path names must get special pre-defined
+        # hash values.
+        mt.calc_fprs()
+        cases = [(missing_files, mt.leaf_fprs, calc.MISSING_FILE_FPR),
+                 (missing_dirs,  mt.node_fprs, calc.MISSING_DIR_FPR)]
+        for miss_paths, fpr_dct, miss_fpr in cases:
+            s_miss_paths = set(miss_paths)
+            s_paths = set(fpr_dct.keys())
+            assert len(s_miss_paths) == 3
+            assert s_miss_paths < s_paths
+            for path in miss_paths:
+                assert fpr_dct[path] == miss_fpr
+
+        # The missing files must not show up in the final result.
+        # XXX doesn't work for outmode=1
+        result = main.assemble_result(mt)
+        s_missing = set(missing_dirs + missing_files)
+        s_paths = set(co.flatten(result.values()))
+        assert s_missing not in s_paths

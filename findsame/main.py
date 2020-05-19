@@ -56,6 +56,9 @@ def assemble_result(merkle_tree):
         for fpr, paths in inv_fprs.items():
             # exclude single items, only multiple fprs for now (hence the
             # name find*same* :)
+            if fpr == missing_fpr:
+                co.debug_msg(f"skip missing {kind}: {paths}")
+                continue
             if len(paths) > 1:
                 # exclude single deep files, where each upper dir has the same
                 # fpr as the deep file
@@ -74,8 +77,6 @@ def assemble_result(merkle_tree):
                         continue
                 if fpr == empty_fpr:
                     typ = f'{kind}:empty'
-                elif fpr == missing_fpr:
-                    typ = f'{kind}:missing'
                 else:
                     typ = f'{kind}'
                 if cfg.outmode == 3:
