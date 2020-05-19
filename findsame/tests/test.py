@@ -7,6 +7,7 @@ import sys
 import tempfile
 import shutil
 import pathlib
+import difflib
 
 from findsame import calc, main
 from findsame import common as co
@@ -89,6 +90,23 @@ def preproc_json_o3(val, ref_fn):
     return val, ref, cmp_o3
 
 
+class TstDataTmpdir(tempfile.TemporaryDirectory):
+    def __enter__(self):
+        # XXX TemporaryDirectory's __enter__ returns a string (tmpdir). Maybe
+        # we sould return a dataclass or smth with just the stuff we need
+        # instead of self.
+        assert not hasattr(self, 'tmpdir')
+        assert not hasattr(self, 'datadir')
+        self.tmpdir = super().__enter__()
+        self.datadir = shutil.copytree(f"{here}/data",
+                                       f"{self.tmpdir}/data",
+                                       symlinks=True)
+        return self
+
+
+def udiff(s1, s2):
+    return '\n'.join(difflib.unified_diff(s1.split(), s2.split(), lineterm=''))
+
 #-------------------------------------------------------------------------------
 # tests
 #-------------------------------------------------------------------------------
@@ -164,14 +182,12 @@ def test_cli():
     cases = [('o1.json', '-o1', preproc_json_o1, '| jq sort'),
              ('o2.json', '-o2', preproc_json_o2, ''),
              ('o3.json', '-o3', preproc_json_o3, '')]
-
-    try:
-        # God, there must be a stdlib way to do this less verbose! Sadly there
-        # is no mkdir(..., exist_ok=True)
+    with TstDataTmpdir() as ctx:
+        # Create emtpy dir on the fly b/c we cannot track those in git in
+        # data/. Yes there are tricks such as an empty .file but we would find
+        # that when *using* the test data.
         for nn in [1,2]:
-            dr = f"{here}/data/empty_dir_{nn}"
-            if not os.path.exists(dr):
-                os.mkdir(dr)
+            os.mkdir(f"{ctx.datadir}/empty_dir_{nn}")
         for name, outer_opts, preproc_func, post in cases:
             # Test all combos only once which are not related to output formatting.
             # o2.json case: the hashes are the ones of the whole file, so all
@@ -180,21 +196,17 @@ def test_cli():
                         '-b 100K -l 400K']
             for opts in opts_lst:
                 exe = f'{here}/../../bin/findsame {outer_opts} {opts}'
-                for args in ['data', 'data/*']:
-                    cmd = f'{exe} {here}/{args} {post}'
+                for args in [f'data', f'data/*']:
+                    cmd = f'cd {ctx.tmpdir} && {exe} {args} {post}'
                     print(cmd)
                     out = subprocess.check_output(cmd, shell=True)
                     out = out.decode()
-                    out = out.replace(here + '/','')
                     print(out)
                     ref_fn = f'{here}/ref_output_{name}'
                     val, ref, comp = preproc_func(out, ref_fn)
-                    assert comp(val, ref), f"{name}\nval:\n{val}\nref:\n{ref}"
-    finally:
-        for nn in [1,2]:
-            dr = f"data/empty_dir_{nn}"
-            if os.path.exists(dr):
-                shutil.rmtree(dr)
+                    diffstr = udiff(json.dumps(val, indent=2),
+                                    json.dumps(ref, indent=2))
+                    assert comp(val, ref), f"{name}\n{diffstr}"
 
 
 def test_jq():
@@ -303,11 +315,10 @@ def test_file_in_cwd():
 
 
 def test_missing():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        # Copy test data to tmpdir, create "missing" files/dirs.
-        data_dir = shutil.copytree(f"{here}/data", f"{tmpdir}/data")
-        missing_files = [f"{data_dir}/missing_file_{x}" for x in [1,2,3]]
-        missing_dirs = [f"{data_dir}/missing_dir_{x}" for x in [1,2,3]]
+    # Copy test data to tmpdir, create "missing" files/dirs.
+    with TstDataTmpdir() as ctx:
+        missing_files = [f"{ctx.datadir}/missing_file_{x}" for x in [1,2,3]]
+        missing_dirs = [f"{ctx.datadir}/missing_dir_{x}" for x in [1,2,3]]
         for fn in missing_files:
             pathlib.Path(fn).touch()
             assert os.path.exists(fn)
@@ -318,7 +329,7 @@ def test_missing():
         # Create tree, don't calc hashes. By now, MerkleTree.tree (which is a
         # FileDirTree instance) has the "missing" path names and beliefs for
         # them to exist.
-        mt = main.get_merkle_tree([data_dir])
+        mt = main.get_merkle_tree([ctx.datadir])
         for miss_paths, paths in [(missing_files, mt.tree.leafs.keys()),
                                   (missing_dirs, mt.tree.nodes.keys())]:
             s_miss_paths = set(miss_paths)
@@ -349,8 +360,11 @@ def test_missing():
                 assert fpr_dct[path] == miss_fpr
 
         # The missing files must not show up in the final result.
-        # XXX doesn't work for outmode=1
         result = main.assemble_result(mt)
+        if cfg.outmode == 1:
+            lst = result
+        else:
+            lst = result.values()
         s_missing = set(missing_dirs + missing_files)
-        s_paths = set(co.flatten(result.values()))
+        s_paths = set(co.flatten(lst))
         assert s_missing not in s_paths
