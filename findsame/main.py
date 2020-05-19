@@ -11,17 +11,20 @@ def get_merkle_tree(files_dirs):
     files = []
     dirs = []
     for path in files_dirs:
-        if os.path.isdir(path):
-            # loose files w/o connection to each other by a top dir, even if
-            # they have, e.g.
-            #   findsame dir/file_*
-            # instead of
-            #   findsame dir
-            dirs.append(path)
+        if os.path.exists(path):
+            if os.path.isdir(path):
+                # loose files w/o connection to each other by a top dir, even if
+                # they have, e.g.
+                #   findsame dir/file_*
+                # instead of
+                #   findsame dir
+                dirs.append(path)
+            else:
+                # everything else (files, links, name dpipes, ...), we deal w/ that
+                # in FileDirTree
+                files.append(path)
         else:
-            # everything else (files, links, name dpipes, ...), we deal w/ that
-            # in FileDirTree
-            files.append(path)
+            raise Exception(f"not found: {path}")
 
     tree = calc.FileDirTree(files=files)
     for dr in dirs:
