@@ -1,6 +1,6 @@
 import functools
 from collections import defaultdict
-
+from io import IOBase
 from findsame.config import cfg
 
 
@@ -113,3 +113,26 @@ def called(func):
         debug_msg(f"DEBUG: calling: {func.__name__}")
         return func(*args, **kwds)
     return wrapper
+
+
+# stolen from pwtools and adapted for python3
+def is_seq(seq):
+    if isinstance(seq, str) or \
+       isinstance(seq, IOBase) or \
+       isinstance(seq, dict):
+        return False
+    else:
+        try:
+            iter(seq)
+            return True
+        except TypeError:
+            return False
+
+
+def flatten(seq):
+    for item in seq:
+        if not is_seq(item):
+            yield item
+        else:
+            for subitem in flatten(item):
+                yield subitem
