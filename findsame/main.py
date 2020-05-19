@@ -39,6 +39,7 @@ def assemble_result(merkle_tree):
     #           typY: [path3]},
     #    fprB: {typX: [...]},
     #    ...}
+    merkle_tree.calc_fprs()
     if cfg.outmode == 3:
         result = defaultdict(list)
     else:

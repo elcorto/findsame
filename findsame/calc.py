@@ -369,6 +369,8 @@ class MerkleTree:
         """
         self.tree = tree
         self.set_leaf_fpr_func(cfg.limit)
+
+    def calc_fprs(self):
         self.calc_leaf_fprs()
         self.calc_node_fprs()
 
