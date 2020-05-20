@@ -48,10 +48,66 @@ cfg.update(default_cfg)
 {cache_flush_setup}
 """
 
+#------------------------------------------------------------------------------
+# helpers
+#------------------------------------------------------------------------------
+
+# adapted from pwtools
+def backup(src, prefix='.'):
+    """Backup (copy) `src` to <src><prefix><num>, where <num> is an integer
+    starting at 0 which is incremented until there is no destination with that
+    name.
+
+    Symlinks are handled by shutil.copy() for files and shutil.copytree() for
+    dirs. In both cases, the content of the file/dir pointed to by the link is
+    copied.
+
+    Parameters
+    ----------
+    src : str
+        name of file/dir to be copied
+    prefix : str, optional
+    """
+    if os.path.exists(src):
+        if os.path.isfile(src):
+            copy = shutil.copy
+        elif os.path.isdir(src):
+            copy = shutil.copytree
+        else:
+            raise Exception("source '%s' is not file or dir" % src)
+        idx = 0
+        dst = src + '%s%s' % (prefix,idx)
+        while os.path.exists(dst):
+            idx += 1
+            dst = src + '%s%s' % (prefix,idx)
+        # sanity check
+        if os.path.exists(dst):
+            raise Exception("destination '%s' exists" % dst)
+        else:
+            copy(src, dst)
+
+
+# pwseep
+
+def update_df(df1, df2):
+    return df1.append(df2, ignore_index=True, sort=False)
+
 
 def mkparams(*args):
     return ps.loops2params(product(*args))
 
+
+def psweep_callback(dct, stmt=None, setup=None):
+    """Default callback func for psweep.run()."""
+    timing = timeit.repeat(stmt.format(**dct),
+                           setup,
+                           repeat=3,
+                           number=1,
+                           globals=None)
+    return {'timing': min(timing)}
+
+
+# generate file sizes
 
 def bytes_logspace(start, stop, num):
     return np.unique(np.logspace(np.log10(start),
@@ -64,6 +120,10 @@ def bytes_linspace(start, stop, num):
                                  stop,
                                  num).astype(int))
 
+
+#------------------------------------------------------------------------------
+# tools to generate synthetic test data
+#------------------------------------------------------------------------------
 
 def write(fn, size):
     """Write a single file of `size` in bytes to path `fn`."""
@@ -138,14 +198,9 @@ def write_collection(collection_size=GiB, min_size=128*KiB, tmpdir=None,
     return testdir, group_dirs, files
 
 
-def psweep_callback(dct, stmt=None, setup=None):
-    """Default callback func for psweep.run()."""
-    timing = timeit.repeat(stmt.format(**dct),
-                           setup,
-                           repeat=3,
-                           number=1,
-                           globals=None)
-    return {'timing': min(timing)}
+#------------------------------------------------------------------------------
+# benchmark functions
+#------------------------------------------------------------------------------
 
 
 def bench_main_blocksize_filesize(tmpdir, maxsize):
@@ -263,9 +318,8 @@ def bench_main_parallel_2d(tmpdir, maxsize):
     return None, stmt, None, params
 
 
-def worker_bench_hash_file_parallel(fn):
+def _worker_bench_hash_file_parallel(fn):
     return calc.hash_file(calc.Leaf(fn), blocksize=256*KiB)
-
 
 def bench_hash_file_parallel(tmpdir, maxsize):
     params = []
@@ -285,7 +339,7 @@ def bench_hash_file_parallel(tmpdir, maxsize):
         ctx = dict(pool_map=pool_map,
                    pl=pl,
                    files=files,
-                   worker=worker_bench_hash_file_parallel,
+                   worker=_worker_bench_hash_file_parallel,
                    )
         timing = timeit.repeat(stmt.format(**dct),
                                setup=setup,
@@ -315,44 +369,6 @@ with pool_map['{pool_type}']({nworkers}) as pool:
 
     return callback, stmt, setup, params
 
-
-def update(df1, df2):
-    return df1.append(df2, ignore_index=True, sort=False)
-
-
-# adapted from pwtools
-def backup(src, prefix='.'):
-    """Backup (copy) `src` to <src><prefix><num>, where <num> is an integer
-    starting at 0 which is incremented until there is no destination with that
-    name.
-
-    Symlinks are handled by shutil.copy() for files and shutil.copytree() for
-    dirs. In both cases, the content of the file/dir pointed to by the link is
-    copied.
-
-    Parameters
-    ----------
-    src : str
-        name of file/dir to be copied
-    prefix : str, optional
-    """
-    if os.path.exists(src):
-        if os.path.isfile(src):
-            copy = shutil.copy
-        elif os.path.isdir(src):
-            copy = shutil.copytree
-        else:
-            raise Exception("source '%s' is not file or dir" % src)
-        idx = 0
-        dst = src + '%s%s' % (prefix,idx)
-        while os.path.exists(dst):
-            idx += 1
-            dst = src + '%s%s' % (prefix,idx)
-        # sanity check
-        if os.path.exists(dst):
-            raise Exception("destination '%s' exists" % dst)
-        else:
-            copy(src, dst)
 
 
 if __name__ == '__main__':
@@ -391,7 +407,7 @@ if __name__ == '__main__':
             def func(p):
                 return callback(p, stmt, setup)
 
-            df = update(df, ps.run(func, params, poolsize=None, save=False))
+            df = update_df(df, ps.run(func, params, poolsize=None, save=False))
             ps.df_write(df, f'save_{idx}_up_to_{bench_func.__name__}_{size2str(maxsize)}.json',
                         fmt='json')
     backup(results)
