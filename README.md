@@ -6,40 +6,38 @@ Find duplicate files and directories.
 As other tools we use file hashes but additionally, we report duplicate
 directories as well, using a Merkle tree for directory hash calculation.
 
-To increase performance, we use parallel hash calculation and optional limits
-on to-be-hashed data.
+To increase performance, we use
 
+* parallel hash calculation (`-t/--nthreads` option), see Benchmarks below
+* optional limits on data to be hashed (`-l/--limit` option)
 
 Install
 =======
 
 From pypi:
 
-.. code-block:: shell
-
-    $ pip3 install findsame
+```sh
+    $ pip install findsame
+```
 
 Dev install of this repo:
 
-.. code-block:: shell
-
+```sh
     $ git clone ...
     $ cd findsame
-    $ pip3 install -e .
+    $ pip install -e .
+```
 
-The core part (package ``findsame`` and the CLI ``bin/findsame``) has no
-external dependencies. If you want to run the benchmarks (see "Benchmarks"
-below), install:
+The core part (package `findsame` and the CLI `bin/findsame`) has no
+external dependencies. If you want to run the benchmarks (see
+"Benchmarks" below), install:
 
-.. code-block:: shell
-
-    $ pip3 install -r requirements_benchmark.txt
-
+```sh
+    $ pip install -r requirements_benchmark.txt
+```
 
 Usage
 =====
-
-::
 
     usage: findsame [-h] [-b BLOCKSIZE] [-l LIMIT] [-p NPROCS] [-t NTHREADS]
                     [-o OUTMODE] [-v]
@@ -73,11 +71,10 @@ Usage
                             [default: 3]
       -v, --verbose         enable verbose/debugging output
 
-The output format is json, see ``-o/--outmode``, default is ``-o 3``. An
+The output format is json, see `-o/--outmode`, default is `-o 3`. An
 example using the test suite data:
 
-.. code-block:: shell
-
+```sh
     $ cd findsame/tests
     $ findsame data | jq .
     {
@@ -123,105 +120,103 @@ example using the test suite data:
         ]
       ]
     }
+```
 
-This returns a dict whose keys are the path type (file, dir). Values are nested
-lists. Each sub-list contains paths having the same hash. A special case is
-``file:empty`` and ``dir:empty`` which actually have the same hash (that of an
-empty string), which is not visible in this format. Use ``-o1`` or ``-o2`` in
-that case. More examples below.
+This returns a dict whose keys are the path type (file, dir). Values are
+nested lists. Each sub-list contains paths having the same hash. Note that we
+also report empty files and dirs.
 
-Use `jq <https://stedolan.github.io/jq>`_ for pretty-printing. Post-processing
-is only limited by your ability to process json (using ``jq``, Python, ...).
+Use [jq](https://stedolan.github.io/jq) for pretty-printing, e.g.
 
-Note that the order of key-value entries in the output from both ``findsame``
-and ``jq`` is random.
+```sh
+    $ findsame data | jq .
+
+    # keep colors in less(1)
+    $ findsame data | jq . -C | less -R
+```
+
+To check out large amounts of data (as in GiB) for the first time, use the
+`-l/--limit` option for speed and use `less -n` as well (don't wait for input
+to load)
+
+```sh
+    $ findsame -l512K data | jq . -C | less -nR
+```
+Post-processing is only limited by your ability to process json (using
+`jq`, Python, ...).
+
+Note that the order of key-value entries in the output from both
+`findsame` and `jq` is random.
 
 Note that currently, we skip symlinks.
-
 
 Performance
 ===========
 
 Parallel hash calculation
 -------------------------
-By default, we use ``--nthreads`` equal to the number of cores. See
+
+By default, we use `--nthreads` equal to the number of cores. See
 "Benchmarks" below.
 
 Limit data to be hashed
 -----------------------
 
 Apart from parallelization, by far the most speed is gained by using
-``--limit``. Note that this may lead to false positives, if files are exactly
-equal in the first ``LIMIT`` bytes. Finding a good enough value can be done by
-trial and error. Try 512K. This is still quite fast and seems to cover most
-real-world data.
+`--limit`. Note that this may lead to false positives, if files are
+exactly equal in the first `LIMIT` bytes. Finding a good enough value
+can be done by trial and error. Try 512K. This is still quite fast and
+seems to cover most real-world data.
 
 Tests
 =====
 
-Run ``nosetests``, ``pytest`` or any other test runner with test discovery.
-
+Run `nosetests`, `pytest` or any other test runner with test discovery.
 
 Benchmarks
 ==========
 
-You may run the benchmark script to find the best blocksize and number threads
-and/or processes for hash calculations on your machine.
+You may run the benchmark script to find the best blocksize and number
+threads and/or processes for hash calculations on your machine.
 
-.. code-block:: shell
-
+```sh
     $ cd findsame/benchmark
     $ ./clean.sh
     $ ./benchmark.py
     $ ./plot.py
+```
 
-This writes test files of various size to ``benchmark/files`` and runs a couple
-of benchmarks (runtime ~10 min for all benchmarks). Make sure to avoid doing
-any other extensive IO tasks while the benchmarks run, of course.
+This writes test files of various size to `benchmark/files` and runs a
+couple of benchmarks (runtime \~10 min for all benchmarks). Make sure to
+avoid doing any other extensive IO tasks while the benchmarks run, of
+course.
 
-**The default value of "maxsize" in benchmark.py (in the __main__ part) is only
-some MiB to allow quick testing. This needs to be changed to, say, 1 GiB in
-order to have meaningful benchmarks.**
+**The default value of "maxsize" in benchmark.py (in the `__main__`
+part) is only some MiB to allow quick testing. This needs to be changed
+to, say, 1 GiB in order to have meaningful benchmarks.**
 
-Bottom line:
+Observations:
 
-* blocksizes below 512 KiB (``--blocksize 512K``) work best for all file sizes
-  on most systems, even though the variation to worst timings is at most factor
-  1.25 (e.g. 1 vs. 1.25 seconds)
-* multithreading (``-t/--nthreads``): up to 2x speedup on dual-core box -- very
-  efficient, use NTHREADS = number of cores for good baseline performance
-  (problem is mostly IO-bound)
-* multiprocessing (``-p/--nprocs``): less efficient speedup, but on some
-  systems NPROCS + NTHREADS is even a bit faster than NTHREADS alone, testing
-  is mandatory
+* blocksizes below 512 KiB (`-b/--blocksize 512K`) work best for all file
+  sizes on most systems, even though the variation to worst timings is
+  at most factor 1.25 (e.g. 1 vs. 1.25 seconds)
+* multithreading (`-t/--nthreads`): up to 2x speedup on dual-core box
+  -- very efficient, use NTHREADS = number of cores for good baseline
+  performance (problem is mostly IO-bound)
+* multiprocessing (`-p/--nprocs`): less efficient speedup, but on some
+  systems NPROCS + NTHREADS is even a bit faster than NTHREADS alone,
+  testing is mandatory
 * we have a linear increase of runtime with filesize, of course
-
-Tested systems:
-
-* Lenovo E330, Samsung 840 Evo SSD, Core i3-3120M (2 cores, 2 threads / core)
-* Lenovo X230, Samsung 840 Evo SSD, Core i5-3210M (2 cores, 2 threads / core)
-
-    * best blocksizes = 256K
-    * speedups: NPROCS=2: 1.5, NTHREADS=2..3: 1.9,
-      no gain when using NPROCS+NTHREADS
-
-* FreeNAS 11 (FreeBSD 11.0), ZFS mirror WD Red WD40EFRX, Intel Celeron J3160
-  (4 cores, 1 thread / core)
-
-    * best blocksizes = 80K
-    * speedups: NPROCS=3..4: 2.1..2.2, NTHREADS=4..6: 2.6..2.7, NPROCS=3..4,NTHREADS=4: 3
-
 
 Output modes
 ============
 
-Default (``-o3``)
------------------
+Default (`-o3`)
+---------------
 
-The default output format is ``-o3`` (same as the initial example above).
+The default output format is `-o3` (same as the initial example above).
 
-.. code-block:: shell
-
+```sh
     $ findsame -o3 data | jq .
     {
       "dir:empty": [
@@ -266,13 +261,12 @@ The default output format is ``-o3`` (same as the initial example above).
         ]
       ]
     }
+```
 
+Output with hashes (`-o2`)
+--------------------------
 
-Output with hashes (``-o2``)
------------------------------
-
-.. code-block:: shell
-
+```sh
     $ findsame -o2 data | jq .
     {
       "da39a3ee5e6b4b0d3255bfef95601890afd80709": {
@@ -319,17 +313,18 @@ Output with hashes (``-o2``)
         ]
       }
     }
+```
 
-The output is one dict (json object) where all same-hash files/dirs are found
-at the same key (hash).
+The output is one dict (json object) where all same-hash files/dirs are
+found at the same key (hash).
 
-Dict values (``-o1``)
----------------------
-The format ``-o1`` lists only the dict values from ``-o2``, i.e. a list of
+Dict values (`-o1`)
+-------------------
+
+The format `-o1` lists only the dict values from `-o2`, i.e. a list of
 dicts.
 
-.. code-block:: shell
-
+```sh
     $ findsame -o1 data | jq .
     [
       {
@@ -376,25 +371,24 @@ dicts.
         ]
       }
     ]
-
+```
 
 More usage examples
 ===================
 
-Here we show examples of common post-processing tasks using ``jq``. When the
-``jq`` command works for all three output modes, we don't specify the ``-o``
-option.
+Here we show examples of common post-processing tasks using `jq`. When
+the `jq` command works for all three output modes, we don't specify the
+`-o` option.
 
 Count the total number of all equals:
 
-.. code-block:: shell
-
+```sh
     $ findsame data | jq '.[]|.[]|.[]' | wc -l
+```
 
 Find only groups of equal dirs:
 
-.. code-block:: shell
-
+```sh
     $ findsame -o1 data | jq '.[]|select(.dir)|.dir'
     $ findsame -o2 data | jq '.[]|select(.dir)|.dir'
     $ findsame -o3 data | jq '.dir|.[]'
@@ -402,11 +396,11 @@ Find only groups of equal dirs:
       "data/dir1",
       "data/dir1_copy"
     ]
+```
 
 Groups of equal files:
 
-.. code-block:: shell
-
+```sh
     $ findsame -o1 data | jq '.[]|select(.file)|.file'
     $ findsame -o2 data | jq '.[]|select(.file)|.file'
     $ findsame -o3 data | jq '.file|.[]'
@@ -425,11 +419,11 @@ Groups of equal files:
       "data/file1",
       "data/file1_copy"
     ]
+```
 
 Find the first element in a group of equal items (file or dir):
 
-.. code-block:: shell
-
+```sh
     $ findsame data | jq '.[]|.[]|[.[0]]'
     [
       "data/lena.png"
@@ -449,11 +443,11 @@ Find the first element in a group of equal items (file or dir):
     [
       "data/dir1"
     ]
+```
 
 or more compact w/o the length-1 list:
 
-.. code-block:: shell
-
+```sh
     $ findsame data | jq '.[]|.[]|.[0]'
     "data/dir2/empty_dir"
     "data/dir2/empty_dir/empty_file"
@@ -461,12 +455,12 @@ or more compact w/o the length-1 list:
     "data/lena.png"
     "data/file1"
     "data/dir1"
+```
 
+Find *all but the first* element in a group of equal items (file or
+dir):
 
-Find *all but the first* element in a group of equal items (file or dir):
-
-.. code-block:: shell
-
+```sh
     $ findsame data | jq '.[]|.[]|.[1:]'
     [
       "data/dir1_copy"
@@ -495,11 +489,11 @@ Find *all but the first* element in a group of equal items (file or dir):
     [
       "data/file1_copy"
     ]
+```
 
 And more compact:
 
-.. code-block:: shell
-
+```sh
     $ findsame data | jq '.[]|.[]|.[1:]|.[]'
     "data/file1_copy"
     "data/dir1/file2_copy"
@@ -516,23 +510,16 @@ And more compact:
     "data/empty_dir"
     "data/empty_dir_copy"
     "data/dir1_copy"
+```
 
 The last one can be used to remove all but the first in a group of equal
 files/dirs:
 
-.. code-block:: shell
-
+```sh
     $ findsame data | jq '.[]|.[]|.[1:]|.[]' | xargs cp -rvt duplicates/
-
-``jq`` trick: preserve color in ``less(1)``:
-
-.. code-block:: shell
-
-   $ findsame data | jq . -C | less -R
-
+```
 
 Other tools
 ===========
 
-* ``fdupes``
-* ``findup`` from ``fslint``
+`fdupes`, `jdupes`, `duff`, `rdfind`, `rmlint`, `findup` (from `fslint`)
