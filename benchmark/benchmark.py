@@ -18,6 +18,19 @@ from findsame.common import KiB, MiB, GiB, size2str
 from findsame import calc
 pj = os.path.join
 
+# Flush disk caches between runs. We use timeit.repeat(stmt, setup, repeat=3,
+# number=1) which does smth like
+#
+#   for i in range(repeat):
+#       setup
+#       for j in range(number):
+#           stmt
+#
+# so setup runs prior to each execution of stmt.
+cache_flush_setup = """
+from subprocess import run
+run("sudo -A sh -c 'sync; echo 3 > /proc/sys/vm/drop_caches'", shell=True)
+"""
 
 # This code is executed by timeit in callback() before each benchmark run. Each
 # run (bench_func) may modify cfg -- the package-wide configuration dict
@@ -26,12 +39,14 @@ pj = os.path.join
 # changes to cfg are persistent from one bench_func to another. This is by
 # design, but in this context here a subtle gotcha. Therefore, we need to reset
 # cfg to default_cfg before doing anything else in each run.
-default_setup = textwrap.dedent("""
-    from findsame import main
-    from findsame.config import cfg, default_cfg
+default_setup = f"""
+from findsame import main
+from findsame.config import cfg, default_cfg
 
-    cfg.update(default_cfg)
-    """)
+cfg.update(default_cfg)
+
+{cache_flush_setup}
+"""
 
 
 def mkparams(*args):
@@ -266,7 +281,7 @@ def bench_hash_file_parallel(tmpdir, maxsize):
                 'thread,proc=1': lambda nw: pl.ProcessAndThreadPoolExecutor(1, nw),
                 }
 
-    def callback(dct, stmt=None, setup='pass'):
+    def callback(dct, stmt=None, setup=cache_flush_setup):
         ctx = dict(pool_map=pool_map,
                    pl=pl,
                    files=files,
@@ -280,6 +295,7 @@ def bench_hash_file_parallel(tmpdir, maxsize):
                                )
         return {'timing': min(timing)}
 
+    # pass b/c we have cache_flush_setup in our own callback
     setup = 'pass'
     stmt = """
 with pool_map['{pool_type}']({nworkers}) as pool:
