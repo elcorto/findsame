@@ -290,23 +290,16 @@ def test_walk_files():
 
 
 def test_empty():
-    # delete=false b/c fd.close() would delete the file. We close it b/c it
-    # will be opened in hash_file() and opening an already open file does
-    # apparently not work on all platforms (it does on unix).
-    #
-    # When leaving the NamedTemporaryFile context, the context manager should
-    # delete the file, but that doesn't happen, thank you very much. Why do we
-    # have that fancy thing again??? Need to do that manually, so could just as
-    # well use good old mkstemp().
-    try:
-        with tempfile.NamedTemporaryFile(prefix='findsame_test_empty', delete=False) as fd:
-            fd.close()
-            assert os.path.exists(fd.name)
-            assert os.path.getsize(fd.name) == 0
-            assert calc.EMPTY_FILE_FPR == calc.hash_file(calc.Leaf(fd.name))
-    finally:
-        if os.path.exists(fd.name):
-            os.remove(fd.name)
+    # Cannot use tempfile.NamedTemporaryFile b/c we cannot create a closed file
+    # with that. On Unix, we can open an already open file again, which happens
+    # when we call hash_file()) but not all platforms support
+    # that. See docs of NamedTemporaryFile.
+    with tempfile.TemporaryDirectory() as tmpdir:
+        fn = f"{tmpdir}/foo"
+        pathlib.Path(fn).touch()
+        assert os.path.exists(fn)
+        assert os.path.getsize(fn) == 0
+        assert calc.EMPTY_FILE_FPR == calc.hash_file(calc.Leaf(fn))
 
 
 def test_file_in_cwd():
