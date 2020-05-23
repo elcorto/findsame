@@ -3,7 +3,7 @@ from collections import defaultdict
 from io import IOBase
 from findsame.config import cfg
 
-
+B = 1
 KiB = 1024
 MiB = KiB**2
 GiB = KiB**3

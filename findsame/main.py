@@ -8,6 +8,9 @@ from findsame.config import cfg
 
 
 def get_merkle_tree(files_dirs):
+    if not co.is_seq(files_dirs):
+        raise ValueError("files_dirs must be a list/tuple like sequence, "
+                         f"got {type(files_dirs)}")
     files = []
     dirs = []
     for path in files_dirs:
