@@ -1,9 +1,3 @@
-# publish on pypi
-# ---------------
-#   $ python3 setup.py sdist bdist_wheel
-#   $ twine upload --repository-url https://test.pypi.org/legacy/ dist/*
-#   $ twine upload dist/*
-
 import os
 from setuptools import setup, find_packages
 
