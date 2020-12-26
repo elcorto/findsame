@@ -7,7 +7,7 @@ B = 1
 KiB = 1024
 MiB = KiB**2
 GiB = KiB**3
-UNITS = [(GiB, 'G'), (MiB, 'M'), (KiB, 'K'), (1, '')]
+UNITS = [(GiB, 'G'), (MiB, 'M'), (KiB, 'K'), (1, 'B')]
 INV_UNITS = dict((vv,kk) for kk,vv in UNITS)
 
 
@@ -15,6 +15,8 @@ def size2str(filesize, sep='', prec=1):
     """Convert size in bytes to string with unit."""
     if filesize is None:
         return 'None'
+    elif filesize == 0:
+        return '0B'
     for unit, symbol in UNITS:
         if filesize // unit == 0:
             continue
