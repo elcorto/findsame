@@ -1,4 +1,3 @@
 matplotlib
-pandas
 numpy
 psweep >= 0.4.0
