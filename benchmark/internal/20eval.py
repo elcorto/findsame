@@ -81,8 +81,8 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         results = sys.argv[1]
     else:
-        results = 'results.json'
-    dfall = ps.df_read(results, fmt='json')
+        results = 'calc/results.pk'
+    dfall = ps.df_read(results)
     if 'share_leafs' in dfall.columns:
         dfall.share_leafs = dfall.share_leafs.astype(bool)
     for maxsize_str in np.unique(dfall.maxsize_str.values):

@@ -1,8 +1,9 @@
 **.pyc
 **.swp
 **.egg-info
-benchmark/files/
-benchmark/pics/
+benchmark/*/files/
+benchmark/*/pics/
+benchmark/*/calc/
 benchmark/*.json*
 build/
 dist/
